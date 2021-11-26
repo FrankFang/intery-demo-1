@@ -1,7 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"intery/cmd"
+)
 
 func main() {
-	fmt.Println("hi")
+	cmd.Execute()
 }
