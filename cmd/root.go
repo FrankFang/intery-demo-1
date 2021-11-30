@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"intery/server"
 	"os"
 
 	"github.com/urfave/cli/v2"
@@ -26,7 +27,7 @@ var rootCmd = &cli.App{
 			Aliases: []string{"s"},
 			Usage:   "start a server",
 			Action: func(c *cli.Context) error {
-				return nil
+				return server.Run()
 			},
 		},
 	},
