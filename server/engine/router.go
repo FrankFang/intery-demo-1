@@ -1,15 +1,18 @@
 package engine
 
 import (
-	"github.com/gin-gonic/gin"
 	"intery/server/engine/auth/github"
 	"intery/server/engine/hi"
+	"intery/server/middlewares"
+
+	"github.com/gin-gonic/gin"
 )
 
 func NewRouter() *gin.Engine {
 	router := gin.Default()
-	hiController := hi.Controller{}
-	router.GET("/hi", hiController.Show)
+	router.Use(middlewares.New()...)
+	h := hi.Controller{}
+	router.GET("/hi", h.Show)
 	v1 := router.Group("v1")
 	{
 		authGroup := v1.Group("auth")
