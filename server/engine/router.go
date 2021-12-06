@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"intery/server/engine/auth/gitee"
 	"intery/server/engine/auth/github"
 	"intery/server/engine/hi"
 	"intery/server/middlewares"
@@ -13,13 +14,19 @@ func NewRouter() *gin.Engine {
 	router.Use(middlewares.New()...)
 	h := hi.Controller{}
 	router.GET("/hi", h.Show)
-	v1 := router.Group("v1")
+	api := router.Group("api")
 	{
-		authGroup := v1.Group("auth")
+		v1 := api.Group("v1")
 		{
-			g := github.Controller{}
-			authGroup.GET("/github", g.Show)
-			authGroup.GET("/github_callback", g.Callback)
+			authGroup := v1.Group("auth")
+			{
+				g := github.Controller{}
+				authGroup.GET("/github", g.Show)
+				authGroup.GET("/github_callback", g.Callback)
+				t := gitee.Controller{}
+				authGroup.GET("/gitee", t.Show)
+				authGroup.GET("/gitee_callback", t.Callback)
+			}
 		}
 	}
 	return router

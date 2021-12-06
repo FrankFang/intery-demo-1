@@ -1,10 +1,11 @@
-package github
+package gitee
 
 import (
 	"fmt"
 	"io/ioutil"
 
 	"github.com/dchest/uniuri"
+
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
 )
@@ -12,12 +13,13 @@ import (
 type Controller struct{}
 
 var conf = &oauth2.Config{
-	ClientID:     "c509b5c3f08700791d87",
-	ClientSecret: "cdcd8662ff64410639c068c2eab51e2879060ecb",
-	Scopes:       []string{"repo"},
+	ClientID:     "ee73eb425c78c965e4b749ec7fb250beee30449fac584ac8b13e0e2a92dd74fe",
+	ClientSecret: "61484b0b39a3d974dbd031b149e152fd469f27368ae600ec804eb438d4c4fafe",
+	Scopes:       []string{"projects", "emails"},
+	RedirectURL:  "http://intery.xiedaimala.com/api/v1/auth/gitee_callback",
 	Endpoint: oauth2.Endpoint{
-		AuthURL:  "https://github.com/login/oauth/authorize",
-		TokenURL: "https://github.com/login/oauth/access_token",
+		AuthURL:  "https://gitee.com/oauth/authorize",
+		TokenURL: "https://gitee.com/oauth/token",
 	},
 }
 
@@ -27,7 +29,6 @@ func (ctrl Controller) Show(c *gin.Context) {
 		"url": url,
 	})
 }
-
 func (ctrl Controller) Callback(c *gin.Context) {
 	code, hasCode := c.GetQuery("code")
 	if !hasCode {
@@ -42,7 +43,7 @@ func (ctrl Controller) Callback(c *gin.Context) {
 	}
 
 	client := conf.Client(c, tok)
-	response, err := client.Get("https://api.github.com/user")
+	response, err := client.Get("https://gitee.com/api/v5/user")
 	if err != nil {
 		fmt.Println(err)
 	}
