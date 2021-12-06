@@ -7,5 +7,8 @@ import (
 
 func main() {
 	initializers.LoadEnv()
-	cmd.Execute()
+	err := cmd.Execute()
+	if err != nil {
+		panic(err)
+	}
 }

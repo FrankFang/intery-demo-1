@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"intery/db"
 	"intery/server"
 	"os"
 
@@ -10,14 +11,26 @@ import (
 var rootCmd = &cli.App{
 	Commands: []*cli.Command{
 		{
-			Name:    "run",
+			Name:    "task",
 			Aliases: []string{"r"},
 			Usage:   "run a task",
 			Subcommands: []*cli.Command{
 				{
 					Name: "db:create",
 					Action: func(c *cli.Context) error {
-						return nil
+						return db.Create("intery_development")
+					},
+				},
+				{
+					Name: "db:migrate",
+					Action: func(c *cli.Context) error {
+						return db.Migrate()
+					},
+				},
+				{
+					Name: "db:rollback",
+					Action: func(c *cli.Context) error {
+						return db.Rollback()
 					},
 				},
 			},
