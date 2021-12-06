@@ -8,8 +8,8 @@ import (
 
 func Run() error {
 	config.Init()
-	database.Init()
-	app, err := engine.Init()
+	db := database.Init()
+	app, err := engine.Init(db)
 	if err != nil {
 		return err
 	} else {

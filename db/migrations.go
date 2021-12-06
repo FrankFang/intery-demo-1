@@ -25,15 +25,15 @@ func NewMigrate() *gormigrate.Gormigrate {
 				}
 				type Authorization struct {
 					gorm.Model
-					Provider         string `gorm:"type:varchar(100);not null"`
-					Token            string `gorm:"type:varchar(100)"`
+					Provider         string   `gorm:"type:varchar(100);not null"`
+					UserId           int64    `gorm:"type:bigint"`
+					Login            string   `gorm:"type:varchar(100)"`
+					Name             string   `gorm:"type:varchar(100)"`
+					AvatarUrl        string   `gorm:"type:text"`
+					ReposUrl         string   `gorm:"type:text"`
+					Raw              struct{} `gorm:"type:jsonb"`
+					Token            string   `gorm:"type:varchar(100)"`
 					TokenGeneratedAt time.Time
-					UserId           int64       `gorm:"type:bigint"`
-					Login            string      `gorm:"type:varchar(100)"`
-					Name             string      `gorm:"type:varchar(100)"`
-					AvatarUrl        string      `gorm:"type:text"`
-					ReposUrl         string      `gorm:"type:text"`
-					Raw              interface{} `gorm:"type:jsonb"`
 				}
 				return d.AutoMigrate(&User{}, &Authorization{})
 			},

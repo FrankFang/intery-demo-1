@@ -2,7 +2,9 @@ package github
 
 import (
 	"fmt"
+	"intery/server/models"
 	"io/ioutil"
+	"log"
 
 	"github.com/dchest/uniuri"
 	"github.com/gin-gonic/gin"
@@ -40,6 +42,13 @@ func (ctrl Controller) Callback(c *gin.Context) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	go func() {
+		a := models.Authorization{}
+		err := a.Save()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	client := conf.Client(c, tok)
 	response, err := client.Get("https://api.github.com/user")
@@ -53,4 +62,40 @@ func (ctrl Controller) Callback(c *gin.Context) {
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	_, _ = w.Write(bytes)
+	/*
+		{
+			login: "FrankFang",
+			id: 839559,
+			node_id: "MDQ6VXNlcjgzOTU1OQ==",
+			avatar_url: "https://avatars.githubusercontent.com/u/839559?v=4",
+			gravatar_id: "",
+			url: "https://api.github.com/users/FrankFang",
+			html_url: "https://github.com/FrankFang",
+			followers_url: "https://api.github.com/users/FrankFang/followers",
+			following_url: "https://api.github.com/users/FrankFang/following{/other_user}",
+			gists_url: "https://api.github.com/users/FrankFang/gists{/gist_id}",
+			starred_url: "https://api.github.com/users/FrankFang/starred{/owner}{/repo}",
+			subscriptions_url: "https://api.github.com/users/FrankFang/subscriptions",
+			organizations_url: "https://api.github.com/users/FrankFang/orgs",
+			repos_url: "https://api.github.com/users/FrankFang/repos",
+			events_url: "https://api.github.com/users/FrankFang/events{/privacy}",
+			received_events_url: "https://api.github.com/users/FrankFang/received_events",
+			type: "User",
+			site_admin: false,
+			name: "Frank Fang",
+			company: "@jirengu-inc ",
+			blog: "https://fangyinghang.com/",
+			location: "Hangzhou, China",
+			email: null,
+			hireable: null,
+			bio: "Former Tencent Employee & Working at Alibaba.",
+			twitter_username: null,
+			public_repos: 366,
+			public_gists: 94,
+			followers: 2765,
+			following: 112,
+			created_at: "2011-06-09T09:16:40Z",
+			updated_at: "2021-11-22T05:33:19Z"
+			}
+	*/
 }

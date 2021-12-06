@@ -14,7 +14,7 @@ func New() gin.HandlerFunc {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
-			return origin == "http://localhost:8080" || origin == "https://www.zhihu.com"
+			return origin == "http://localhost:8080" || origin == "http://127.0.0.1:3000"
 		},
 		MaxAge: 12 * time.Hour,
 	})
