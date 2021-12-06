@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"intery/server/engine/auth/gitea"
 	"intery/server/engine/auth/gitee"
 	"intery/server/engine/auth/github"
 	"intery/server/engine/hi"
@@ -26,6 +27,9 @@ func NewRouter() *gin.Engine {
 				t := gitee.Controller{}
 				authGroup.GET("/gitee", t.Show)
 				authGroup.GET("/gitee_callback", t.Callback)
+				a := gitea.Controller{}
+				authGroup.GET("/gitea", a.Show)
+				authGroup.GET("/gitea_callback", a.Callback)
 			}
 		}
 	}
