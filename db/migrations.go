@@ -33,6 +33,9 @@ func NewMigrate() *gormigrate.Gormigrate {
 					ReposUrl         string   `gorm:"type:text"`
 					Raw              struct{} `gorm:"type:jsonb"`
 					Token            string   `gorm:"type:varchar(100)"`
+					TokenType        string   `gorm:"type:varchar(100)"`
+					RefreshToken     string   `gorm:"type:varchar(100)"`
+					Expiry           time.Time
 					TokenGeneratedAt time.Time
 				}
 				return d.AutoMigrate(&User{}, &Authorization{})

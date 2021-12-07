@@ -33,6 +33,23 @@ var rootCmd = &cli.App{
 						return db.Rollback()
 					},
 				},
+				{
+					Name: "db:destroy",
+					Action: func(context *cli.Context) error {
+						return db.Destroy("intery_development")
+					},
+				},
+				{
+					Name: "db:reset",
+					Action: func(context *cli.Context) error {
+						_ = db.Destroy("intery_development")
+						err := db.Create("intery_development")
+						if err != nil {
+							return err
+						}
+						return db.Migrate()
+					},
+				},
 			},
 		},
 		{
