@@ -12,6 +12,7 @@ import (
 
 func NewRouter() *gin.Engine {
 	router := gin.Default()
+	router.LoadHTMLGlob("server/templates/*")
 	router.Use(middlewares.New()...)
 	h := hi.Controller{}
 	router.GET("/hi", h.Show)

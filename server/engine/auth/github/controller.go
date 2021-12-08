@@ -97,9 +97,13 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		if err != nil {
 			panic(err)
 		}
-		w := c.Writer
-		w.Header().Set("Content-Type", "application/json;charset=utf-8")
-		_, _ = w.Write(bytes)
+		// c.JSON(200, gin.H{
+		// 	"jwt": user.JWT(),
+		// })
+		c.HTML(200, "jwt.html", gin.H{
+			"jwt":      user.JWT(),
+			"returnTo": "http://127.0.0.1:3000",
+		})
 		break
 	}
 }
