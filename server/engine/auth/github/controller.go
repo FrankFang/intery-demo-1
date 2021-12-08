@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"intery/server/models"
 	"io/ioutil"
-	"log"
+	"time"
 
 	"github.com/dchest/uniuri"
 	"github.com/gin-gonic/gin"
@@ -38,6 +38,7 @@ func (ctrl Controller) Show(c *gin.Context) {
 }
 
 func (ctrl Controller) Callback(c *gin.Context) {
+	// get code
 	code, hasCode := c.GetQuery("code")
 	if !hasCode {
 		c.JSON(400, gin.H{
@@ -45,41 +46,56 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		})
 		return
 	}
+	// exchange code for token
 	token, err := conf.Exchange(c, code)
 	if err != nil {
 		fmt.Println(err)
 	}
-	a := models.Authorization{}
-	a.Token = token.AccessToken
-	a.RefreshToken = token.RefreshToken
-	a.Expiry = token.Expiry
-	a.Provider = "github"
-	err = a.Save()
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	// create client with token
 	client := conf.Client(c, token)
 	defer client.CloseIdleConnections()
+
+	// get github user via client
 	for i := 0; i < 3; i++ {
 		response, err := client.Get("https://api.github.com/user")
 		if err != nil {
 			continue
 		}
 		bytes, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			continue
+		}
 		githubUser := GitHubUser{}
 		err = json.Unmarshal(bytes, &githubUser)
 		if err != nil {
 			continue
 		}
-		a.AvatarUrl = githubUser.AvatarUrl
-		a.Name = githubUser.Name
-		a.UserId = githubUser.Id
-		a.Login = githubUser.Login
+		// create authorization
+		name := githubUser.Name
+		if name == "" {
+			name = githubUser.Login
+		}
+		user := models.User{Name: name}
+		err = user.Create()
+		if err != nil {
+			panic(err)
+		}
+		a := models.Authorization{
+			UserId:           user.ID,
+			Token:            token.AccessToken,
+			TokenGeneratedAt: time.Now(),
+			TokenType:        token.TokenType,
+			RefreshToken:     token.RefreshToken,
+			Expiry:           token.Expiry,
+			Provider:         "github",
+			AvatarUrl:        githubUser.AvatarUrl,
+			Name:             githubUser.Name,
+			VendorId:         fmt.Sprintf("%v", githubUser.Id),
+			Login:            githubUser.Login,
+		}
 		err = a.Save()
 		if err != nil {
 			panic(err)
-			return
 		}
 		w := c.Writer
 		w.Header().Set("Content-Type", "application/json;charset=utf-8")

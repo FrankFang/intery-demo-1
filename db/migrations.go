@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-gormigrate/gormigrate/v2"
@@ -25,22 +26,25 @@ func NewMigrate() *gormigrate.Gormigrate {
 				}
 				type Authorization struct {
 					gorm.Model
-					Provider         string   `gorm:"type:varchar(100);not null"`
-					UserId           int64    `gorm:"type:bigint"`
-					Login            string   `gorm:"type:varchar(100)"`
-					Name             string   `gorm:"type:varchar(100)"`
-					AvatarUrl        string   `gorm:"type:text"`
-					ReposUrl         string   `gorm:"type:text"`
-					Raw              struct{} `gorm:"type:jsonb"`
-					Token            string   `gorm:"type:varchar(100)"`
-					TokenType        string   `gorm:"type:varchar(100)"`
-					RefreshToken     string   `gorm:"type:varchar(100)"`
-					Expiry           time.Time
-					TokenGeneratedAt time.Time
+					Provider         string    `gorm:"type:varchar(100);not null"`
+					UserId           uint      `gorm:"not null"`
+					VendorId         string    `gorm:"type:varchar(100);not null"`
+					Login            string    `gorm:"type:varchar(100);not null"`
+					Name             string    `gorm:"type:varchar(100)"`
+					AvatarUrl        string    `gorm:"type:text"`
+					ReposUrl         string    `gorm:"type:text"`
+					Raw              struct{}  `gorm:"type:jsonb"`
+					Token            string    `gorm:"type:varchar(100);not null"`
+					TokenType        string    `gorm:"type:varchar(100)"`
+					RefreshToken     string    `gorm:"type:varchar(100)"`
+					Expiry           time.Time `gorm:"default: null"`
+					TokenGeneratedAt time.Time `gorm:"not null;default: null"`
 				}
+				fmt.Println("created table User, Authorzation")
 				return d.AutoMigrate(&User{}, &Authorization{})
 			},
 			Rollback: func(d *gorm.DB) error {
+				fmt.Println("dropped table User, Authorzation")
 				return d.Migrator().DropTable("users", "authorizations")
 			},
 		},
