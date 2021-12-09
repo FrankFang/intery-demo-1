@@ -24,7 +24,7 @@ func NewRouter() *gin.Engine {
 			{
 				g := github.Controller{}
 				authGroup.GET("/github", g.Show)
-				authGroup.GET("/github_callback", g.Callback)
+				authGroup.POST("/github_callback", g.Callback)
 				t := gitee.Controller{}
 				authGroup.GET("/gitee", t.Show)
 				authGroup.GET("/gitee_callback", t.Callback)

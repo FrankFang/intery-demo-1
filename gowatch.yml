@@ -1,0 +1,8 @@
+appname: "intery"
+cmd_args:
+    - server
+envs:
+    - PRIVATE_KEY=/root/repos/intery-demo-1/intery.rsa
+    - PUBLIC_KEY=/root/repos/intery-demo-1/intery.rsa.pub
+# log level, support debug, info, warn, error, fatal
+log_level: "debug"

@@ -38,16 +38,19 @@ func (ctrl Controller) Show(c *gin.Context) {
 }
 
 func (ctrl Controller) Callback(c *gin.Context) {
-	// get code
-	code, hasCode := c.GetQuery("code")
-	if !hasCode {
+	var p struct {
+		Code string `json:"code"`
+	}
+	body, _ := ioutil.ReadAll(c.Request.Body)
+	err := json.Unmarshal(body, &p)
+	if err != nil {
 		c.JSON(400, gin.H{
 			"reason": "no code",
 		})
 		return
 	}
 	// exchange code for token
-	token, err := conf.Exchange(c, code)
+	token, err := conf.Exchange(c, p.Code)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -97,12 +100,8 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		if err != nil {
 			panic(err)
 		}
-		// c.JSON(200, gin.H{
-		// 	"jwt": user.JWT(),
-		// })
-		c.HTML(200, "jwt.html", gin.H{
-			"jwt":      user.JWT(),
-			"returnTo": "http://127.0.0.1:3000",
+		c.JSON(200, gin.H{
+			"jwt": user.JWT(),
 		})
 		break
 	}
