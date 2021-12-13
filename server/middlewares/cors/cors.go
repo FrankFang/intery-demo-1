@@ -10,11 +10,11 @@ import (
 func New() gin.HandlerFunc {
 	return cors.New(cors.Config{
 		AllowMethods:     []string{"PUT", "PATCH", "POST"},
-		AllowHeaders:     []string{"Origin"},
+		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
-			return origin == "http://localhost:8080" || origin == "http://127.0.0.1:3000"
+			return origin == "http://localhost:3000" || origin == "http://127.0.0.1:3000"
 		},
 		MaxAge: 12 * time.Hour,
 	})

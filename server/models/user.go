@@ -33,25 +33,18 @@ func (u User) JWT() string {
 	return fmt.Sprintf("%v", token)
 }
 
-type CustomClaimsExample struct {
+type CustomClaims struct {
 	*jwt.StandardClaims
-	TokenType string
-	CustomerInfo
-}
-type CustomerInfo struct {
-	ID uint
+	UserId uint `json:"user_id"`
 }
 
 func createToken(userId uint) (string, error) {
 	t := jwt.New(jwt.GetSigningMethod("RS256"))
-
-	t.Claims = &CustomClaimsExample{
+	t.Claims = &CustomClaims{
 		&jwt.StandardClaims{
-
-			ExpiresAt: time.Now().Add(time.Minute * 1).Unix(),
+			ExpiresAt: time.Now().Add(time.Hour * 24 * 7).Unix(),
 		},
-		"level1",
-		CustomerInfo{userId},
+		userId,
 	}
 
 	signBytes, err := ioutil.ReadFile(os.Getenv("PRIVATE_KEY"))

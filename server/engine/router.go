@@ -5,6 +5,7 @@ import (
 	"intery/server/engine/auth/gitee"
 	"intery/server/engine/auth/github"
 	"intery/server/engine/hi"
+	"intery/server/engine/projects"
 	"intery/server/middlewares"
 
 	"github.com/gin-gonic/gin"
@@ -12,7 +13,6 @@ import (
 
 func NewRouter() *gin.Engine {
 	router := gin.Default()
-	router.LoadHTMLGlob("server/templates/*")
 	router.Use(middlewares.New()...)
 	h := hi.Controller{}
 	router.GET("/hi", h.Show)
@@ -20,6 +20,11 @@ func NewRouter() *gin.Engine {
 	{
 		v1 := api.Group("v1")
 		{
+			projectsGroups := v1.Group("projects")
+			{
+				p := projects.Controller{}
+				projectsGroups.POST("/", p.Create)
+			}
 			authGroup := v1.Group("auth")
 			{
 				g := github.Controller{}

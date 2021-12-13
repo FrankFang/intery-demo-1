@@ -9,7 +9,6 @@ import (
 
 	"github.com/dchest/uniuri"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/oauth2"
 )
 
 type Controller struct{}
@@ -20,15 +19,7 @@ type GitHubUser struct {
 	Name      string `json:"name"`
 }
 
-var conf = &oauth2.Config{
-	ClientID:     "c509b5c3f08700791d87",
-	ClientSecret: "cdcd8662ff64410639c068c2eab51e2879060ecb",
-	Scopes:       []string{"repo"},
-	Endpoint: oauth2.Endpoint{
-		AuthURL:  "https://github.com/login/oauth/authorize",
-		TokenURL: "https://github.com/login/oauth/access_token",
-	},
-}
+var conf = Conf
 
 func (ctrl Controller) Show(c *gin.Context) {
 	url := conf.AuthCodeURL(uniuri.New())
@@ -73,7 +64,6 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		if err != nil {
 			continue
 		}
-		// create authorization
 		name := githubUser.Name
 		if name == "" {
 			name = githubUser.Login
@@ -85,7 +75,7 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		}
 		a := models.Authorization{
 			UserId:           user.ID,
-			Token:            token.AccessToken,
+			AccessToken:      token.AccessToken,
 			TokenGeneratedAt: time.Now(),
 			TokenType:        token.TokenType,
 			RefreshToken:     token.RefreshToken,

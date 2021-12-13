@@ -16,8 +16,8 @@ type Authorization struct {
 	Name             string    `gorm:"type:varchar(100)"`
 	AvatarUrl        string    `gorm:"type:text"`
 	ReposUrl         string    `gorm:"type:text"`
-	Raw              struct{}  `gorm:"type:jsonb"`
-	Token            string    `gorm:"type:varchar(100);not null"`
+	Raw              string    `gorm:"type:text"`
+	AccessToken      string    `gorm:"type:varchar(100);not null"`
 	TokenType        string    `gorm:"type:varchar(100)"`
 	RefreshToken     string    `gorm:"type:varchar(100)"`
 	Expiry           time.Time `gorm:"default: null"`
