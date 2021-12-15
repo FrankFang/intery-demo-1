@@ -5,7 +5,7 @@ import (
 	"intery/server/engine/auth/gitee"
 	"intery/server/engine/auth/github"
 	"intery/server/engine/hi"
-	"intery/server/engine/projects"
+	"intery/server/engine/project"
 	"intery/server/middlewares"
 
 	"github.com/gin-gonic/gin"
@@ -22,11 +22,12 @@ func NewRouter() *gin.Engine {
 		{
 			// deploysGroups := v1.Group("deploys")
 			// {
-
+			// 	d := deploys.Controller{}
+			// 	deploysGroups.GET("/", Deploy.Deploys)
 			// }
 			projectsGroup := v1.Group("projects")
 			{
-				p := projects.Controller{}
+				p := project.Controller{}
 				projectsGroup.POST("/", p.Create)
 			}
 			authGroup := v1.Group("auth")
