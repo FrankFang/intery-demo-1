@@ -9,13 +9,12 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"gorm.io/gorm"
 )
 
 var signKey *rsa.PrivateKey
 
 type User struct {
-	gorm.Model
+	BaseModel
 	Name string `gorm:"type:varchar(100);not null"`
 }
 

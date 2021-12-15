@@ -3,12 +3,10 @@ package models
 import (
 	"intery/server/database"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Authorization struct {
-	gorm.Model
+	BaseModel
 	Provider         string    `gorm:"type:varchar(100);not null"`
 	UserId           uint      `gorm:"not null"`
 	VendorId         string    `gorm:"type:varchar(100);not null"`
