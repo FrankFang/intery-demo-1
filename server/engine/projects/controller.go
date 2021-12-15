@@ -79,7 +79,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	auth := getAuthFromUserId(userId)
 	oauth2Token := oauth2.Token{AccessToken: auth.AccessToken, RefreshToken: "hi"}
 	client := sdk.NewClient(github.Conf.Client(c, &oauth2Token))
-	repo, response, err := client.Repositories.Create(c, "", &sdk.Repository{
+	repo, _, err := client.Repositories.Create(c, "", &sdk.Repository{
 		Name:    sdk.String(params.RepoName),
 		Private: sdk.Bool(false),
 	})
@@ -123,7 +123,18 @@ func (ctrl *Controller) Create(c *gin.Context) {
 			SHA: newCommit.SHA,
 		},
 	}, false)
-	c.JSON(response.StatusCode, repo)
+	// create project and save to database
+	project := models.Project{
+		AppKind:  params.AppKind,
+		RepoName: repo.GetName(),
+		UserId:   userId,
+		RepoHome: repo.GetHTMLURL(),
+	}
+	err = project.Create()
+	if err != nil {
+		log.Fatal(err)
+	}
+	c.JSON(http.StatusCreated, project)
 }
 
 // helper function
