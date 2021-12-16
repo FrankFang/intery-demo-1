@@ -1,9 +1,8 @@
-package models
+package model
 
 import (
 	"crypto/rsa"
 	"fmt"
-	"intery/server/database"
 	"io/ioutil"
 	"os"
 	"time"
@@ -18,12 +17,6 @@ type User struct {
 	Name string `gorm:"type:varchar(100);not null"`
 }
 
-func (u *User) Create() error {
-	return database.GetDB().Create(&u).Error
-}
-func (u *User) Update() error {
-	return database.GetDB().Save(&u).Error
-}
 func (u User) JWT() string {
 	token, err := createToken(u.ID)
 	if err != nil {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"intery/server/database"
 	"intery/server/engine/base"
-	"intery/server/models"
+	"intery/server/model"
 	"log"
 	"net/http"
 
@@ -24,7 +24,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		log.Fatal(err)
 	}
 
-	project := &models.Project{}
+	project := &model.Project{}
 	database.GetDB().First(project, "id = ?", params.ProjectId)
 	user, auth, err := ctrl.GetUserAndAuth(c)
 	if err != nil {

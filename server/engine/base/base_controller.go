@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"intery/server/database"
 	"intery/server/engine/auth/github"
-	"intery/server/models"
+	"intery/server/model"
 	"io/ioutil"
 	"log"
 	"os"
@@ -44,12 +44,12 @@ func (ctrl *BaseController) GetUserIdFromHeader(c *gin.Context) (userId uint, er
 	return
 }
 
-func (ctrl *BaseController) GetAuthFromUserId(userId uint) (auth *models.Authorization) {
+func (ctrl *BaseController) GetAuthFromUserId(userId uint) (auth *model.Authorization) {
 	database.GetDB().Find(&auth, "user_id = ?", userId)
 	return auth
 }
 
-func (ctrl *BaseController) GetUserAndAuth(c *gin.Context) (user *models.User, auth *models.Authorization, err error) {
+func (ctrl *BaseController) GetUserAndAuth(c *gin.Context) (user *model.User, auth *model.Authorization, err error) {
 	userId, err := ctrl.GetUserIdFromHeader(c)
 	database.GetDB().First(user, "id = ?", userId)
 	if user == nil {
@@ -63,7 +63,7 @@ func (ctrl *BaseController) GetUserAndAuth(c *gin.Context) (user *models.User, a
 	}
 	return
 }
-func (ctrl *BaseController) GetGithubClient(c *gin.Context, auth *models.Authorization) (client *sdk.Client) {
+func (ctrl *BaseController) GetGithubClient(c *gin.Context, auth *model.Authorization) (client *sdk.Client) {
 	oauth2Token := oauth2.Token{AccessToken: auth.AccessToken, RefreshToken: "-"}
 	client = sdk.NewClient(github.Conf.Client(c, &oauth2Token))
 	return

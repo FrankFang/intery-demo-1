@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"html/template"
 	"intery/server/engine/auth/github"
-	"intery/server/models"
+	"intery/server/model"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -94,13 +94,13 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		},
 	}, false)
 	// create project and save to database
-	project := models.Project{
+	project := model.Project{
 		AppKind:  params.AppKind,
 		RepoName: repo.GetName(),
 		UserId:   user.ID,
 		RepoHome: repo.GetHTMLURL(),
 	}
-	err = project.Create()
+	// err = project.Create()
 	if err != nil {
 		log.Fatal(err)
 	}

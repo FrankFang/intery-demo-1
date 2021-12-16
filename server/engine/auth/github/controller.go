@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"intery/server/database"
-	"intery/server/models"
+	"intery/server/model"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 
@@ -34,8 +35,11 @@ func (ctrl Controller) Callback(c *gin.Context) {
 	var p struct {
 		Code string `json:"code"`
 	}
-	body, _ := ioutil.ReadAll(c.Request.Body)
-	err := json.Unmarshal(body, &p)
+	body, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = json.Unmarshal(body, &p)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"reason": "no code",
@@ -66,24 +70,25 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		if err != nil {
 			continue
 		}
-		auth := models.Authorization{
+		auth := model.Authorization{
 			Provider: "github",
 			Login:    githubUser.Login,
 		}
-		var user models.User
+		var user model.User
 		database.GetDB().FirstOrInit(&auth)
 		if auth.UserId == 0 {
 			name := githubUser.Name
 			if name == "" {
 				name = githubUser.Login
 			}
-			user = models.User{Name: name}
-			if err = user.Create(); err != nil {
+			user = model.User{Name: name}
+			err := database.GetQuery().WithContext(c).User.Create(&user)
+			if err != nil {
 				panic(err)
 			}
 			auth.UserId = user.ID
 		} else {
-			database.GetDB().First(user, auth.UserId)
+			database.GetDB().First(&user, auth.UserId)
 		}
 		auth.AccessToken = token.AccessToken
 		auth.TokenType = token.TokenType
@@ -93,7 +98,8 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		auth.AvatarUrl = githubUser.AvatarUrl
 		auth.Name = githubUser.Name
 		auth.VendorId = fmt.Sprintf("%v", githubUser.Id)
-		if err = auth.Save(); err != nil {
+		database.GetQuery().WithContext(c).Authorization.Save(&auth)
+		if err = database.GetQuery().WithContext(c).Authorization.Save(&auth); err != nil {
 			panic(err)
 		}
 		c.JSON(200, gin.H{

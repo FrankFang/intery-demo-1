@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"intery/cmd/generate"
 	"intery/db"
 	"intery/server"
 	"os"
@@ -18,36 +19,39 @@ var rootCmd = &cli.App{
 				{
 					Name: "db:create",
 					Action: func(c *cli.Context) error {
-						return db.Create("intery_development")
+						return db.Create("intery")
 					},
 				},
 				{
 					Name: "db:migrate",
 					Action: func(c *cli.Context) error {
-						return db.Migrate()
+						return db.Migrate("intery")
 					},
 				},
 				{
 					Name: "db:rollback",
 					Action: func(c *cli.Context) error {
-						return db.Rollback()
+						return db.Rollback("intery")
 					},
 				},
 				{
 					Name: "db:destroy",
 					Action: func(context *cli.Context) error {
-						return db.Destroy("intery_development")
+						return db.Destroy("intery")
 					},
 				},
 				{
 					Name: "db:reset",
 					Action: func(context *cli.Context) error {
-						_ = db.Destroy("intery_development")
-						err := db.Create("intery_development")
-						if err != nil {
-							return err
-						}
-						return db.Migrate()
+						return db.Reset("intery")
+					},
+				},
+				{
+					Name:    "generate",
+					Aliases: []string{"g"},
+					Action: func(context *cli.Context) error {
+						generate.Run()
+						return nil
 					},
 				},
 			},

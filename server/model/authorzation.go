@@ -1,7 +1,6 @@
-package models
+package model
 
 import (
-	"intery/server/database"
 	"time"
 )
 
@@ -20,14 +19,4 @@ type Authorization struct {
 	RefreshToken     string    `gorm:"type:varchar(100)"`
 	Expiry           time.Time `gorm:"default: null"`
 	TokenGeneratedAt time.Time `gorm:"not null;default: null"`
-}
-
-func (a *Authorization) Create() error {
-	return database.GetDB().Create(&a).Error
-}
-func (a *Authorization) Update() error {
-	return database.GetDB().Updates(&a).Error
-}
-func (a *Authorization) Save() error {
-	return database.GetDB().Save(&a).Error
 }
