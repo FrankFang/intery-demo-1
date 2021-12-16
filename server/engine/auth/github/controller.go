@@ -3,8 +3,10 @@ package github
 import (
 	"encoding/json"
 	"fmt"
+	"intery/server/database"
 	"intery/server/models"
 	"io/ioutil"
+	"net/http"
 	"time"
 
 	"github.com/dchest/uniuri"
@@ -64,35 +66,44 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		if err != nil {
 			continue
 		}
-		name := githubUser.Name
-		if name == "" {
-			name = githubUser.Login
+		auth := models.Authorization{
+			Provider: "github",
+			Login:    githubUser.Login,
 		}
-		user := models.User{Name: name}
-		err = user.Create()
-		if err != nil {
-			panic(err)
+		var user models.User
+		database.GetDB().FirstOrInit(&auth)
+		if auth.UserId == 0 {
+			name := githubUser.Name
+			if name == "" {
+				name = githubUser.Login
+			}
+			user = models.User{Name: name}
+			if err = user.Create(); err != nil {
+				panic(err)
+			}
+			auth.UserId = user.ID
+		} else {
+			database.GetDB().First(user, auth.UserId)
 		}
-		a := models.Authorization{
-			UserId:           user.ID,
-			AccessToken:      token.AccessToken,
-			TokenGeneratedAt: time.Now(),
-			TokenType:        token.TokenType,
-			RefreshToken:     token.RefreshToken,
-			Expiry:           token.Expiry,
-			Provider:         "github",
-			AvatarUrl:        githubUser.AvatarUrl,
-			Name:             githubUser.Name,
-			VendorId:         fmt.Sprintf("%v", githubUser.Id),
-			Login:            githubUser.Login,
-		}
-		err = a.Save()
-		if err != nil {
+		auth.AccessToken = token.AccessToken
+		auth.TokenType = token.TokenType
+		auth.RefreshToken = token.RefreshToken
+		auth.Expiry = token.Expiry
+		auth.TokenGeneratedAt = time.Now()
+		auth.AvatarUrl = githubUser.AvatarUrl
+		auth.Name = githubUser.Name
+		auth.VendorId = fmt.Sprintf("%v", githubUser.Id)
+		if err = auth.Save(); err != nil {
 			panic(err)
 		}
 		c.JSON(200, gin.H{
 			"jwt": user.JWT(),
 		})
 		break
+	}
+	if !c.Writer.Written() {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"reason": "无法获取 GitHub User 信息",
+		})
 	}
 }

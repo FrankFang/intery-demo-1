@@ -22,10 +22,12 @@ type Authorization struct {
 	TokenGeneratedAt time.Time `gorm:"not null;default: null"`
 }
 
-func (a Authorization) Save() error {
-	if a.ID == 0 {
-		return database.GetDB().Create(&a).Error
-	} else {
-		return database.GetDB().Save(&a).Error
-	}
+func (a *Authorization) Create() error {
+	return database.GetDB().Create(&a).Error
+}
+func (a *Authorization) Update() error {
+	return database.GetDB().Updates(&a).Error
+}
+func (a *Authorization) Save() error {
+	return database.GetDB().Save(&a).Error
 }
