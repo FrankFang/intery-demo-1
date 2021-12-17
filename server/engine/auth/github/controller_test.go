@@ -2,9 +2,8 @@ package github
 
 import (
 	"encoding/json"
-	"intery/db"
+	"intery/server/test"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -19,20 +18,9 @@ type GitHubControllerTestSuite struct {
 }
 
 func TestGitHubCtrollerTestSuite(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	db.Reset("intery")
+	test.Setup(t)
 	suite.Run(t, new(GitHubControllerTestSuite))
-}
-
-func (s *GitHubControllerTestSuite) SetupTest() {
-	os.Setenv("PRIVATE_KEY", "/root/repos/intery-demo-1/intery.rsa")
-	os.Setenv("PUBLIC_KEY", "/root/repos/intery-demo-1/intery.rsa.pub")
-}
-
-func (s *GitHubControllerTestSuite) TearDownTest() {
-	os.Unsetenv("PRIVATE_KEY")
-	os.Unsetenv("PUBLIC_KEY")
-	gock.Off()
+	test.Teardown(t)
 }
 
 func (s *GitHubControllerTestSuite) TestShow() {
@@ -40,7 +28,7 @@ func (s *GitHubControllerTestSuite) TestShow() {
 	c, _ := gin.CreateTestContext(w)
 	ctrl := Controller{}
 	ctrl.Show(c)
-	assert.Equal(s.T(), 200, w.Code) // or what value you need it to be
+	assert.Equal(s.T(), 200, w.Code)
 
 	var body gin.H
 	err := json.Unmarshal(w.Body.Bytes(), &body)

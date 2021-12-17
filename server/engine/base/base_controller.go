@@ -51,8 +51,13 @@ func (ctrl *BaseController) GetAuthFromUserId(userId uint) (auth *model.Authoriz
 
 func (ctrl *BaseController) GetUserAndAuth(c *gin.Context) (user *model.User, auth *model.Authorization, err error) {
 	userId, err := ctrl.GetUserIdFromHeader(c)
-	database.GetDB().First(user, "id = ?", userId)
-	if user == nil {
+	if err != nil {
+		err = fmt.Errorf("无法从 Header 中获取 user id")
+		return
+	}
+	u := database.GetQuery().User
+	user, err = u.WithContext(c).Where(u.ID.Eq(userId)).First()
+	if err != nil {
 		err = fmt.Errorf("不存在 id 为 %v 的用户", userId)
 		return
 	}

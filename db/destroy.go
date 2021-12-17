@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgconn"
 )
 
-func Destroy(name string) error {
+func Drop(name string) error {
 	pgConn, err := pgconn.Connect(context.Background(), "postgresql://intery:123456@psql1:5432/postgres")
 	if err != nil {
 		log.Fatalln("pgconn failed to connect: ", err)
@@ -24,7 +24,7 @@ func Destroy(name string) error {
 	} else {
 		name = fmt.Sprintf("%s_production", name)
 	}
-	result := pgConn.Exec(context.Background(), "drop database "+name)
+	result := pgConn.Exec(context.Background(), "drop database if exists "+name)
 	if _, err := result.ReadAll(); err != nil {
 		log.Fatalf("drop database %v failed: %v \n", name, err)
 		return err

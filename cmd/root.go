@@ -35,9 +35,9 @@ var rootCmd = &cli.App{
 					},
 				},
 				{
-					Name: "db:destroy",
+					Name: "db:drop",
 					Action: func(context *cli.Context) error {
-						return db.Destroy("intery")
+						return db.Drop("intery")
 					},
 				},
 				{

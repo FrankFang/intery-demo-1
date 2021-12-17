@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"intery/server/engine/base"
 
@@ -62,12 +63,21 @@ func (ctrl *Controller) Create(c *gin.Context) {
 			log.Fatal("Create repo failed.", err)
 		}
 	}
-	repoContent, _, _ := client.Repositories.CreateFile(c, auth.Login, repo.GetName(), "README.md", &sdk.RepositoryContentFileOptions{
-		Content: []byte("# " + repo.GetName()),
+	repoContent, _, err := client.Repositories.CreateFile(c, auth.Login, params.RepoName, "README.md", &sdk.RepositoryContentFileOptions{
+		Content: []byte("# " + params.RepoName),
 		Message: sdk.String("Initial commit"),
 	})
-	tree, _, _ := client.Git.GetTree(c, auth.Login, repo.GetName(), *repoContent.SHA, true)
-	files := getNodejsAppFiles(struct{ Name string }{Name: repo.GetName()})
+	if err != nil {
+		if err, ok := err.(*sdk.ErrorResponse); ok {
+			defer err.Response.Body.Close()
+			transformResponse(c, err.Response)
+			return
+		} else {
+			log.Fatal("Create file failed.", err)
+		}
+	}
+	tree, _, err := client.Git.GetTree(c, auth.Login, params.RepoName, *repoContent.SHA, true)
+	files := getNodejsAppFiles(struct{ Name string }{Name: params.RepoName})
 	fileTree := make([]*sdk.TreeEntry, 0, 128)
 	for _, file := range files {
 		fileTree = append(fileTree, &sdk.TreeEntry{
@@ -77,8 +87,8 @@ func (ctrl *Controller) Create(c *gin.Context) {
 			Content: sdk.String(file.Content),
 		})
 	}
-	newTree, _, _ := client.Git.CreateTree(c, auth.Login, repo.GetName(), *tree.SHA, fileTree)
-	newCommit, _, _ := client.Git.CreateCommit(c, auth.Login, repo.GetName(), &sdk.Commit{
+	newTree, _, _ := client.Git.CreateTree(c, auth.Login, params.RepoName, *tree.SHA, fileTree)
+	newCommit, _, _ := client.Git.CreateCommit(c, auth.Login, params.RepoName, &sdk.Commit{
 		Message: sdk.String("Second commit"),
 		Tree:    newTree,
 		Parents: []*sdk.Commit{
@@ -87,7 +97,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 			},
 		},
 	})
-	_, _, _ = client.Git.UpdateRef(c, auth.Login, repo.GetName(), &sdk.Reference{
+	_, _, _ = client.Git.UpdateRef(c, auth.Login, params.RepoName, &sdk.Reference{
 		Ref: sdk.String("refs/heads/main"),
 		Object: &sdk.GitObject{
 			SHA: newCommit.SHA,
@@ -96,7 +106,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	// create project and save to database
 	project := model.Project{
 		AppKind:  params.AppKind,
-		RepoName: repo.GetName(),
+		RepoName: params.RepoName,
 		UserId:   user.ID,
 		RepoHome: repo.GetHTMLURL(),
 	}
@@ -104,7 +114,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	c.JSON(http.StatusCreated, project)
+	c.JSON(http.StatusCreated, gin.H{"resource": project})
 }
 
 // helper function
@@ -115,17 +125,19 @@ type Node struct {
 
 func getNodejsAppFiles(data interface{}) (nodes []Node) {
 	currentDir, _ := os.Getwd()
+	// FIXME: hard code
+	if gin.Mode() == gin.TestMode {
+		for !strings.HasSuffix(currentDir, "intery-demo-1" /*project dir name*/) {
+			currentDir = filepath.Dir(currentDir)
+		}
+	}
 	dir := filepath.Join(currentDir, "server/app_templates/nodejs")
-	// walk through dir and filter all files's relative path to dir
 	filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
 		if f.IsDir() {
 			return nil
 		}
-		// get content from path
 		content, _ := ioutil.ReadFile(path)
-		// use template to parse the content
 		t, _ := template.New("text").Parse(string(content))
-		// t execute and get the result to x
 		var b bytes.Buffer
 		t.Execute(&b, data)
 		relativePath, _ := filepath.Rel(dir, path)
