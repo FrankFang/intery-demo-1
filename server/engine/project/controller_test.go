@@ -3,7 +3,9 @@ package project
 import (
 	"encoding/json"
 	"fmt"
-	"intery/server/test"
+	"intery/server/database"
+	"intery/test"
+	"intery/test/helper"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,15 +22,16 @@ type ProjectControllerTestSuite struct {
 }
 
 func TestProjectControllerTestSuite(t *testing.T) {
-	test.Setup(t)
+	id := test.GetId()
+	test.Setup(t, id)
 	suite.Run(t, new(ProjectControllerTestSuite))
-	test.Teardown(t)
+	test.Teardown(t, id)
 }
 
 func (s *ProjectControllerTestSuite) TestCreate() {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	user := test.CreateUser(c)
+	user := helper.CreateUser(c)
 	gock.New("https://api.github.com").
 		Post("/user/repos").
 		Reply(200).
@@ -51,7 +54,8 @@ func (s *ProjectControllerTestSuite) TestCreate() {
 		JSON(map[string]interface{}{"ref": "refs/heads/main"})
 	c.Request = httptest.NewRequest("POST", "/api/v1/auth/github_callback",
 		strings.NewReader(`{"app_kind": "nodejs", "repo_name": "test"}`))
-	test.SignIn(c, user)
+	helper.SignIn(c, user)
+	count1, _ := database.GetQuery().Project.WithContext(c).Count()
 	ctrl := Controller{}
 	ctrl.Create(c)
 	assert.Equal(s.T(), http.StatusCreated, w.Code)
@@ -63,4 +67,7 @@ func (s *ProjectControllerTestSuite) TestCreate() {
 	}
 	resource := body["resource"].(map[string]interface{})
 	assert.IsType(s.T(), 1.23, resource["id"])
+	count2, _ := database.GetQuery().Project.WithContext(c).Count()
+	// 数据库中新增一个 project
+	assert.Equal(s.T(), count1+1, count2)
 }

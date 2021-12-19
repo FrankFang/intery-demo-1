@@ -1,4 +1,4 @@
-package test
+package helper
 
 import (
 	"encoding/json"
@@ -38,6 +38,9 @@ func CreateUser(c *gin.Context) (user *model.User) {
 }
 
 func SignIn(c *gin.Context, user *model.User) {
+	if user == nil {
+		return
+	}
 	gock.New("https://github.com").
 		Post("/login/oauth/access_token").
 		Reply(200).

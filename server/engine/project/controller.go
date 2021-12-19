@@ -3,6 +3,7 @@ package project
 import (
 	"bytes"
 	"html/template"
+	"intery/server/database"
 	"intery/server/engine/auth/github"
 	"intery/server/model"
 	"io/ioutil"
@@ -21,18 +22,6 @@ import (
 
 type Controller struct {
 	base.BaseController
-}
-
-func transformResponse(c *gin.Context, response *http.Response) {
-	c.Status(response.StatusCode)
-	if response.ContentLength == 0 {
-		return
-	}
-	content, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		log.Fatal("Read response body failed.", err)
-	}
-	c.Writer.Write(content)
 }
 
 func (ctrl *Controller) Create(c *gin.Context) {
@@ -77,6 +66,15 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		}
 	}
 	tree, _, err := client.Git.GetTree(c, auth.Login, params.RepoName, *repoContent.SHA, true)
+	if err != nil {
+		if err, ok := err.(*sdk.ErrorResponse); ok {
+			defer err.Response.Body.Close()
+			transformResponse(c, err.Response)
+			return
+		} else {
+			log.Fatal("Get tree failed.", err)
+		}
+	}
 	files := getNodejsAppFiles(struct{ Name string }{Name: params.RepoName})
 	fileTree := make([]*sdk.TreeEntry, 0, 128)
 	for _, file := range files {
@@ -110,7 +108,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		UserId:   user.ID,
 		RepoHome: repo.GetHTMLURL(),
 	}
-	// err = project.Create()
+	err = database.GetQuery().Project.WithContext(c).Create(&project)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -148,4 +146,16 @@ func getNodejsAppFiles(data interface{}) (nodes []Node) {
 		return nil
 	})
 	return
+}
+
+func transformResponse(c *gin.Context, response *http.Response) {
+	c.Status(response.StatusCode)
+	if response.ContentLength == 0 {
+		return
+	}
+	content, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal("Read response body failed.", err)
+	}
+	c.Writer.Write(content)
 }

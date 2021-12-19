@@ -1,9 +1,11 @@
 package db
 
-import "log"
+import (
+	"log"
+)
 
-func Rollback(name string) error {
-	m := NewMigrate(name)
+func Rollback() error {
+	m := NewMigrate()
 	if err := m.RollbackLast(); err != nil {
 		log.Fatalf("Could not rollback: %v", err)
 		return err

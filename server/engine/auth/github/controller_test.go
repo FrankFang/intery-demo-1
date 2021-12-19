@@ -2,7 +2,7 @@ package github
 
 import (
 	"encoding/json"
-	"intery/server/test"
+	"intery/test"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -18,9 +18,10 @@ type GitHubControllerTestSuite struct {
 }
 
 func TestGitHubCtrollerTestSuite(t *testing.T) {
-	test.Setup(t)
+	id := test.GetId()
+	test.Setup(t, id)
 	suite.Run(t, new(GitHubControllerTestSuite))
-	test.Teardown(t)
+	test.Teardown(t, id)
 }
 
 func (s *GitHubControllerTestSuite) TestShow() {

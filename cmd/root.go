@@ -19,31 +19,31 @@ var rootCmd = &cli.App{
 				{
 					Name: "db:create",
 					Action: func(c *cli.Context) error {
-						return db.Create("intery")
+						return db.Create()
 					},
 				},
 				{
 					Name: "db:migrate",
 					Action: func(c *cli.Context) error {
-						return db.Migrate("intery")
+						return db.Migrate()
 					},
 				},
 				{
 					Name: "db:rollback",
 					Action: func(c *cli.Context) error {
-						return db.Rollback("intery")
+						return db.Rollback()
 					},
 				},
 				{
 					Name: "db:drop",
 					Action: func(context *cli.Context) error {
-						return db.Drop("intery")
+						return db.Drop()
 					},
 				},
 				{
 					Name: "db:reset",
 					Action: func(context *cli.Context) error {
-						return db.Reset("intery")
+						return db.Reset()
 					},
 				},
 				{

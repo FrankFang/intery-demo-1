@@ -4,8 +4,8 @@ import (
 	"log"
 )
 
-func Migrate(name string) error {
-	m := NewMigrate(name)
+func Migrate() error {
+	m := NewMigrate()
 	if err := m.Migrate(); err != nil {
 		log.Fatalf("Could not migrate: %v", err)
 		return err

@@ -2,28 +2,15 @@ package db
 
 import (
 	"fmt"
+	"intery/server/database"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/go-gormigrate/gormigrate/v2"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func NewMigrate(name string) *gormigrate.Gormigrate {
-	if gin.Mode() == gin.TestMode {
-		name = fmt.Sprintf("%s_test", name)
-	} else if gin.Mode() == gin.DebugMode {
-		name = fmt.Sprintf("%s_development", name)
-	} else {
-		name = fmt.Sprintf("%s_production", name)
-	}
-	dsn := fmt.Sprintf("host=psql1 user=intery database=%v password=123456 port=5432", name)
-	// TODO 把所有 Open 合并到一个函数中
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect database")
-	}
+func NewMigrate() *gormigrate.Gormigrate {
+	db := database.GetDB()
 	migrations := gormigrate.New(db, gormigrate.DefaultOptions, []*gormigrate.Migration{
 		{
 			ID: "1638802075376",
