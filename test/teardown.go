@@ -9,7 +9,7 @@ import (
 	"gopkg.in/h2non/gock.v1"
 )
 
-func Teardown(t *testing.T, id int) {
+func Teardown(t *testing.T, id string) {
 	database.CloseDB()
 	db.Drop()
 	os.Unsetenv("DB_NAME")

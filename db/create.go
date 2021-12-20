@@ -43,9 +43,9 @@ func Create() (err error) {
 			log.Fatalf("create database %v failed: %v \n", name, err)
 			return err
 		}
-		fmt.Printf("Database %v created!\n", name)
+		log.Printf("Database %v created!\n", name)
 	} else {
-		fmt.Printf("Datebase %v exists, skip creation\n", name)
+		log.Printf("Datebase %v exists, skip creation\n", name)
 	}
 	return nil
 }
