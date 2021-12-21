@@ -1,20 +1,21 @@
 package deploy
 
 import (
+	"fmt"
 	"log"
+	"path/filepath"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
 	"github.com/gin-gonic/gin"
 )
 
 type Options struct {
 	ImageName     string
 	ContainerName string
-	Port          string
+	SocketDir     string
 	Path          string
 }
 
@@ -31,10 +32,8 @@ func CreateDockerContainer(ctx *gin.Context, opt Options) error {
 		WorkingDir: "/app",
 		Cmd:        []string{"/usr/local/bin/node", "server.js"},
 		Env: []string{
+			fmt.Sprintf("PORT=%s", filepath.Join(opt.SocketDir, "app.socket")),
 			"NODE_ENV=production",
-		},
-		ExposedPorts: nat.PortSet{
-			"8080/tcp": struct{}{},
 		},
 	}
 	hostConfig := container.HostConfig{
@@ -44,13 +43,11 @@ func CreateDockerContainer(ctx *gin.Context, opt Options) error {
 				Target: "/app/",
 				Source: opt.Path,
 			},
-		},
-		PortBindings: nat.PortMap{
-			"8080/tcp": []nat.PortBinding{
-				{
-					HostIP:   "",
-					HostPort: opt.Port,
-				},
+			{
+				Type:     "bind",
+				Target:   "/tmp/socket/",
+				Source:   opt.SocketDir,
+				ReadOnly: false,
 			},
 		},
 	}

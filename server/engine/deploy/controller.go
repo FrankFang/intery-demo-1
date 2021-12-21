@@ -48,14 +48,21 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dir := filepath.Join("/root/intery-userspace/", strconv.Itoa(int(user.ID)), project.RepoName)
+	cwd, _ := os.Getwd()
+	dir := filepath.Join(cwd, "/userspace/", strconv.Itoa(int(user.ID)), project.RepoName)
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		log.Fatal(err)
 	}
 	archivePath := filepath.Join(dir, "archive.zip")
 	targetPath := filepath.Join(dir, "src")
-	err = downloadFile(url.String(), archivePath)
-	if err != nil {
+	socketDir := filepath.Join(dir, "socket")
+	if err := os.MkdirAll(socketDir, os.ModePerm); err != nil {
+		log.Fatal(err)
+	}
+	if err := os.Chmod(socketDir, 0777); err != nil {
+		log.Fatal(err)
+	}
+	if err := downloadFile(url.String(), archivePath); err != nil {
 		log.Fatal(err)
 	}
 
@@ -78,7 +85,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	fmt.Println(dirName)
 	err = CreateDockerContainer(c, Options{
 		ImageName: "node:latest",
-		Port:      "7777",
+		SocketDir: socketDir,
 		Path:      filepath.Join(targetPath, dirName),
 	})
 	if err != nil {
