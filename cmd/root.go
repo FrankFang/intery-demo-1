@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"intery/cmd/docker"
 	"intery/cmd/generate"
 	"intery/db"
 	"intery/server"
+	"log"
 	"os"
 
 	"github.com/urfave/cli/v2"
@@ -13,7 +15,7 @@ var rootCmd = &cli.App{
 	Commands: []*cli.Command{
 		{
 			Name:    "task",
-			Aliases: []string{"r"},
+			Aliases: []string{"t"},
 			Usage:   "run a task",
 			Subcommands: []*cli.Command{
 				{
@@ -51,6 +53,17 @@ var rootCmd = &cli.App{
 					Aliases: []string{"g"},
 					Action: func(context *cli.Context) error {
 						generate.Run()
+						return nil
+					},
+				},
+				{
+					Name: "nginx:start",
+					Action: func(context *cli.Context) error {
+						containerId, err := docker.StartNginx()
+						if err != nil {
+							return err
+						}
+						log.Println(containerId)
 						return nil
 					},
 				},

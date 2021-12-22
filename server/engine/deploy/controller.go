@@ -49,13 +49,21 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		log.Fatal(err)
 	}
 	cwd, _ := os.Getwd()
-	dir := filepath.Join(cwd, "/userspace/", strconv.Itoa(int(user.ID)), project.RepoName)
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+	userDir := filepath.Join(cwd, "/userspace/", strconv.Itoa(int(user.ID)))
+	if err := os.RemoveAll(userDir); err != nil {
 		log.Fatal(err)
 	}
-	archivePath := filepath.Join(dir, "archive.zip")
-	targetPath := filepath.Join(dir, "src")
-	socketDir := filepath.Join(dir, "socket")
+	if err := os.MkdirAll(userDir, os.ModePerm); err != nil {
+		log.Fatal(err)
+	}
+
+	projectDir := filepath.Join(userDir, strconv.Itoa(int(project.ID)))
+	if err := os.MkdirAll(projectDir, os.ModePerm); err != nil {
+		log.Fatal(err)
+	}
+	archivePath := filepath.Join(projectDir, "src.zip")
+	srcDir := filepath.Join(projectDir, "src")
+	socketDir := filepath.Join(projectDir, "socket")
 	if err := os.MkdirAll(socketDir, os.ModePerm); err != nil {
 		log.Fatal(err)
 	}
@@ -66,32 +74,36 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		log.Fatal(err)
 	}
 
-	uz := unzip.New(archivePath, targetPath)
+	uz := unzip.New(archivePath, srcDir)
 	err = uz.Extract()
 	if err != nil {
 		fmt.Println(err)
 	}
 	var dirName string
-	files, err := ioutil.ReadDir(targetPath)
-	if err != nil {
+	if files, err := ioutil.ReadDir(srcDir); err != nil {
 		log.Fatal(err)
-	}
-	for _, file := range files {
-		if file.IsDir() {
-			dirName = file.Name()
-			break
+	} else {
+		for _, node := range files {
+			if node.IsDir() {
+				dirName = node.Name()
+				break
+			}
 		}
 	}
-	fmt.Println(dirName)
-	err = CreateDockerContainer(c, Options{
+	containerId, err := CreateDockerContainer(c, Options{
 		ImageName: "node:latest",
 		SocketDir: socketDir,
-		Path:      filepath.Join(targetPath, dirName),
+		Path:      filepath.Join(srcDir, dirName),
 	})
 	if err != nil {
-		log.Fatal(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{"resource": gin.H{"url": "http://localhost:7777"}})
+	// reader, _ := GetContainerLogs(c, containerId)
+	// defer reader.Close()
+	// logs, _ := ioutil.ReadAll(reader)
+	// c.JSON(http.StatusOK, gin.H{"resource": gin.H{"containerId": containerId}, "logs": logs})
+	c.JSON(http.StatusOK, gin.H{"resource": gin.H{"containerId": containerId}})
 }
 
 func downloadFile(url string, filepath string) error {

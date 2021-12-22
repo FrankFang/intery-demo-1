@@ -2,8 +2,7 @@ package deploy
 
 import (
 	"fmt"
-	"log"
-	"path/filepath"
+	"io"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -19,22 +18,25 @@ type Options struct {
 	Path          string
 }
 
-func CreateDockerContainer(ctx *gin.Context, opt Options) error {
+func CreateDockerContainer(ctx *gin.Context, opt Options) (containerId string, err error) {
 
-	// 创建客户端
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 
 	config := container.Config{
 		Image:      opt.ImageName,
 		WorkingDir: "/app",
-		Cmd:        []string{"/usr/local/bin/node", "server.js"},
+		Cmd:        []string{"/usr/local/bin/node", "server.js", "--no-color"},
 		Env: []string{
-			fmt.Sprintf("PORT=%s", filepath.Join(opt.SocketDir, "app.socket")),
+			fmt.Sprintf("PORT=%s", "/tmp/socket/app.sock"),
 			"NODE_ENV=production",
 		},
+		AttachStdin:  true,
+		AttachStdout: true,
+		AttachStderr: true,
+		Tty:          false,
 	}
 	hostConfig := container.HostConfig{
 		Mounts: []mount.Mount{
@@ -54,11 +56,24 @@ func CreateDockerContainer(ctx *gin.Context, opt Options) error {
 	// 用客户端创建容器
 	body, err := cli.ContainerCreate(ctx, &config, &hostConfig, nil, nil, opt.ContainerName)
 	if err != nil {
-		log.Fatal(err)
+		return body.ID, err
 	}
 	// 以 -d 选项启动容器
-	if err := cli.ContainerStart(ctx, body.ID, types.ContainerStartOptions{}); err != nil {
-		log.Fatal(err)
+	if err = cli.ContainerStart(ctx, body.ID, types.ContainerStartOptions{}); err != nil {
+		return body.ID, err
 	}
-	return nil
+	return body.ID, nil
+}
+
+func GetContainerLogs(ctx *gin.Context, containerId string) (reader io.ReadCloser, err error) {
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		return
+	}
+	reader, err = cli.ContainerLogs(ctx, containerId, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+	})
+	return
 }
