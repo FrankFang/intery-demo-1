@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -21,38 +22,19 @@ func StartNginx() (containerId string, err error) {
 	}
 
 	ctx := context.Background()
-	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{
-		Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: NginxContainerName}),
-	})
+	containerId, err = getNginxContainerId(ctx, cli)
 	if err != nil {
 		return
 	}
-	if len(containers) == 0 {
-		config := container.Config{
-			Image: "nginx",
-		}
-		cwd, _ := os.Getwd()
-		hostConfig := container.HostConfig{
-			Mounts: []mount.Mount{
-				{
-					Type:   "bind",
-					Target: "/etc/nginx/conf.d/default.conf",
-					Source: filepath.Join(cwd, "config/nginx_default.conf"),
-				},
-			},
-		}
-		body, err := cli.ContainerCreate(ctx, &config, &hostConfig, nil, nil, NginxContainerName)
+	if containerId == "" {
+		fmt.Println("containerId is empty")
+		containerId, err = createNginxContainer(ctx, cli)
 		if err != nil {
-			return "", err
+			return
 		}
-		containerId = body.ID
-	} else {
-		containerId = containers[0].ID
 	}
+
 	inspect, err := cli.ContainerInspect(ctx, containerId)
-	if err != nil {
-		return
-	}
 	if !inspect.State.Running {
 		err = cli.ContainerStart(ctx, containerId, types.ContainerStartOptions{})
 		if err != nil {
@@ -60,5 +42,45 @@ func StartNginx() (containerId string, err error) {
 		}
 	}
 	return
+}
 
+func ReloadNginx() {
+
+}
+
+func getNginxContainerId(ctx context.Context, cli *client.Client) (containerId string, err error) {
+	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{
+		Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: NginxContainerName}),
+		All:     true,
+	})
+	if err != nil {
+		return
+	}
+	if len(containers) == 0 {
+		return "", nil
+	}
+	containerId = containers[0].ID
+	return
+}
+
+func createNginxContainer(ctx context.Context, cli *client.Client) (containerId string, err error) {
+	config := container.Config{
+		Image: "nginx",
+	}
+	cwd, _ := os.Getwd()
+	hostConfig := container.HostConfig{
+		Mounts: []mount.Mount{
+			{
+				Type:   "bind",
+				Target: "/etc/nginx/conf.d/default.conf",
+				Source: filepath.Join(cwd, "config/nginx_default.conf"),
+			},
+		},
+	}
+	body, err := cli.ContainerCreate(ctx, &config, &hostConfig, nil, nil, NginxContainerName)
+	if err != nil {
+		return
+	}
+	containerId = body.ID
+	return
 }
