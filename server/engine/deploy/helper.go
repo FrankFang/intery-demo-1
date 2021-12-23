@@ -6,6 +6,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,7 @@ type Options struct {
 	ImageName     string
 	ContainerName string
 	SocketDir     string
+	SocketName    string
 	Path          string
 }
 
@@ -25,12 +27,29 @@ func CreateDockerContainer(ctx *gin.Context, opt Options) (containerId string, e
 		return
 	}
 
+	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{
+		Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: opt.ContainerName}),
+		All:     true,
+	})
+	if err != nil {
+		return
+	}
+	if len(containers) > 0 {
+		containerId = containers[0].ID
+		err = cli.ContainerRemove(ctx, containerId, types.ContainerRemoveOptions{
+			Force: true,
+		})
+		if err != nil {
+			return
+		}
+	}
+
 	config := container.Config{
 		Image:      opt.ImageName,
 		WorkingDir: "/app",
 		Cmd:        []string{"/usr/local/bin/node", "server.js", "--no-color"},
 		Env: []string{
-			fmt.Sprintf("PORT=%s", "/tmp/socket/app.sock"),
+			fmt.Sprintf("PORT=/tmp/socket/%s.sock", opt.SocketName),
 			"NODE_ENV=production",
 		},
 		AttachStdin:  true,

@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"fmt"
+	"intery/cmd/docker"
 	"intery/server/database"
 	"intery/server/engine/base"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/artdarek/go-unzip"
 	"github.com/gin-gonic/gin"
@@ -63,7 +65,8 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	}
 	archivePath := filepath.Join(projectDir, "src.zip")
 	srcDir := filepath.Join(projectDir, "src")
-	socketDir := filepath.Join(projectDir, "socket")
+	socketDir := filepath.Join(cwd, "userspace", "socket")
+	confPath := filepath.Join(cwd, "config", "nginx_default.conf")
 	if err := os.MkdirAll(socketDir, os.ModePerm); err != nil {
 		log.Fatal(err)
 	}
@@ -91,18 +94,49 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		}
 	}
 	containerId, err := CreateDockerContainer(c, Options{
-		ImageName: "node:latest",
-		SocketDir: socketDir,
-		Path:      filepath.Join(srcDir, dirName),
+		ImageName:     "node:latest",
+		ContainerName: fmt.Sprintf("app_%d_%d", user.ID, project.ID),
+		SocketDir:     socketDir,
+		SocketName:    strconv.Itoa(int(project.ID)),
+		Path:          filepath.Join(srcDir, dirName),
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 		return
 	}
-	// reader, _ := GetContainerLogs(c, containerId)
-	// defer reader.Close()
-	// logs, _ := ioutil.ReadAll(reader)
-	// c.JSON(http.StatusOK, gin.H{"resource": gin.H{"containerId": containerId}, "logs": logs})
+	comments := "# Append content below"
+	content, err := ioutil.ReadFile(confPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// TODO: check if the content is already in the file
+	s := string(content)
+	// check if s contains the container id
+	if !strings.Contains(s, fmt.Sprintf("location /%d/", project.ID)) {
+		s = strings.Replace(s, comments, comments+"\n"+fmt.Sprintf(`
+	location /%d/ {
+		proxy_pass http://upstream_%d;
+		proxy_set_header            Host $host;
+		proxy_set_header            X-Real-IP $remote_addr;
+		proxy_http_version          1.1;
+		proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header            X-Forwarded-Proto http;
+		proxy_redirect              http:// $scheme://;
+	}
+`, project.ID, project.ID), -1)
+		s = fmt.Sprintf(`upstream upstream_%d {
+	server unix:/tmp/socket/%d.sock;
+}
+`, project.ID, project.ID) + s
+	}
+	err = ioutil.WriteFile(confPath, []byte(s), 0777)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = docker.ReloadNginx(c)
+	if err != nil {
+		log.Fatal(err)
+	}
 	c.JSON(http.StatusOK, gin.H{"resource": gin.H{"containerId": containerId}})
 }
 

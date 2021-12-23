@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"intery/cmd/docker"
 	"intery/cmd/generate"
 	"intery/db"
@@ -58,8 +59,9 @@ var rootCmd = &cli.App{
 				},
 				{
 					Name: "nginx:start",
-					Action: func(context *cli.Context) error {
-						containerId, err := docker.StartNginx()
+					Action: func(c *cli.Context) error {
+						ctx := context.Background()
+						containerId, err := docker.StartNginxContainer(ctx)
 						if err != nil {
 							return err
 						}
