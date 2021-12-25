@@ -93,12 +93,16 @@ func (ctrl *Controller) Create(c *gin.Context) {
 			}
 		}
 	}
+	socketFileName := fmt.Sprintf("%s.sock", strconv.Itoa(int(project.ID)))
+	if err := os.RemoveAll(filepath.Join(socketDir, socketFileName)); err != nil {
+		log.Println(err)
+	}
 	containerId, err := CreateDockerContainer(c, Options{
-		ImageName:     "node:latest",
-		ContainerName: fmt.Sprintf("app_%d_%d", user.ID, project.ID),
-		SocketDir:     socketDir,
-		SocketName:    strconv.Itoa(int(project.ID)),
-		Path:          filepath.Join(srcDir, dirName),
+		ImageName:      "node:latest",
+		ContainerName:  fmt.Sprintf("app_%d_%d", user.ID, project.ID),
+		SocketDir:      socketDir,
+		SocketFileName: socketFileName,
+		Path:           filepath.Join(srcDir, dirName),
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})

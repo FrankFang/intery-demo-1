@@ -8,6 +8,7 @@ import (
 	"intery/server"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 )
@@ -66,6 +67,26 @@ var rootCmd = &cli.App{
 							return err
 						}
 						log.Println(containerId)
+						return nil
+					},
+				},
+				{
+					Name: "clear",
+					Action: func(c *cli.Context) error {
+						// remove all files in /tmp/socket
+						cwd, err := os.Getwd()
+						if err != nil {
+							return err
+						}
+						socketDir := filepath.Join(cwd, "userspace/socket")
+						err = os.RemoveAll(socketDir)
+						if err != nil {
+							return err
+						}
+						err = os.MkdirAll(socketDir, 0777)
+						if err != nil {
+							return err
+						}
 						return nil
 					},
 				},

@@ -16,7 +16,7 @@ type Options struct {
 	ImageName     string
 	ContainerName string
 	SocketDir     string
-	SocketName    string
+	SocketFileName    string
 	Path          string
 }
 
@@ -49,7 +49,7 @@ func CreateDockerContainer(ctx *gin.Context, opt Options) (containerId string, e
 		WorkingDir: "/app",
 		Cmd:        []string{"/usr/local/bin/node", "server.js", "--no-color"},
 		Env: []string{
-			fmt.Sprintf("PORT=/tmp/socket/%s.sock", opt.SocketName),
+			fmt.Sprintf("PORT=/tmp/socket/%s", opt.SocketFileName),
 			"NODE_ENV=production",
 		},
 		AttachStdin:  true,
