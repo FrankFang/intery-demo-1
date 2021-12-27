@@ -13,16 +13,20 @@ import (
 )
 
 type Options struct {
-	ImageName     string
-	ContainerName string
-	SocketDir     string
-	SocketFileName    string
-	Path          string
+	ImageName      string
+	ContainerName  string
+	SocketDir      string
+	SocketFileName string
+	Path           string
 }
 
 func CreateDockerContainer(ctx *gin.Context, opt Options) (containerId string, err error) {
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		return
+	}
+	_, err = cli.ImagePull(ctx, opt.ImageName, types.ImagePullOptions{})
 	if err != nil {
 		return
 	}
@@ -47,15 +51,14 @@ func CreateDockerContainer(ctx *gin.Context, opt Options) (containerId string, e
 	config := container.Config{
 		Image:      opt.ImageName,
 		WorkingDir: "/app",
-		Cmd:        []string{"/usr/local/bin/node", "server.js", "--no-color"},
+		Cmd:        []string{"/usr/local/bin/node", "server.js"},
 		Env: []string{
 			fmt.Sprintf("PORT=/tmp/socket/%s", opt.SocketFileName),
 			"NODE_ENV=production",
 		},
-		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
-		Tty:          false,
+		Tty:          true,
 	}
 	hostConfig := container.HostConfig{
 		Mounts: []mount.Mount{
@@ -72,16 +75,14 @@ func CreateDockerContainer(ctx *gin.Context, opt Options) (containerId string, e
 			},
 		},
 	}
-	// 用客户端创建容器
 	body, err := cli.ContainerCreate(ctx, &config, &hostConfig, nil, nil, opt.ContainerName)
 	if err != nil {
 		return body.ID, err
 	}
-	// 以 -d 选项启动容器
 	if err = cli.ContainerStart(ctx, body.ID, types.ContainerStartOptions{}); err != nil {
 		return body.ID, err
 	}
-	return body.ID, nil
+	return body.ID, err
 }
 
 func GetContainerLogs(ctx *gin.Context, containerId string) (reader io.ReadCloser, err error) {

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"intery/server/engine/base"
@@ -113,6 +114,45 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		log.Fatal(err)
 	}
 	c.JSON(http.StatusCreated, gin.H{"resource": project})
+}
+
+func (ctrl *Controller) Show(c *gin.Context) {
+	_, err := ctrl.MustSignIn(c)
+	if err != nil {
+		return
+	}
+	idString := c.Param("id")
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"reason": err.Error()})
+		return
+	}
+	p := database.GetQuery().Project
+	project, err := p.WithContext(c).Where(p.ID.Eq(uint(id))).First()
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"reason": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"resource": project})
+}
+func (ctrl *Controller) Index(c *gin.Context) {
+	page, err := ctrl.MustHasPage(c)
+	if err != nil {
+		return
+	}
+	auth, err := ctrl.MustAuth(c)
+	if err != nil {
+		return
+	}
+	p := database.GetQuery().Project
+	projects, err := p.WithContext(c).Where(p.UserId.Eq(auth.UserId)).Limit(page * 10).Find()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"resource": projects,
+	})
 }
 
 // helper function
