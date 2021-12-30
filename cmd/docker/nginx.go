@@ -108,6 +108,16 @@ func ReloadNginx(ctx context.Context) (err error) {
 			return errors.New("start nginx container failed")
 		}
 	}
+	inspect, err := cli.ContainerInspect(ctx, containerId)
+	if err != nil {
+		return
+	}
+	if !inspect.State.Running {
+		err = cli.ContainerStart(ctx, containerId, types.ContainerStartOptions{})
+		if err != nil {
+			return
+		}
+	}
 	exec, err := cli.ContainerExecCreate(ctx, containerId, types.ExecConfig{
 		Cmd: []string{"nginx", "-s", "reload"},
 	})

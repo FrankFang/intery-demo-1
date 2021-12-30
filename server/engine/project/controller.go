@@ -2,6 +2,7 @@ package project
 
 import (
 	"bytes"
+	"encoding/json"
 	"html/template"
 	"intery/server/database"
 	"intery/server/engine/auth/github"
@@ -197,5 +198,24 @@ func transformResponse(c *gin.Context, response *http.Response) {
 	if err != nil {
 		log.Fatal("Read response body failed.", err)
 	}
-	c.Writer.Write(content)
+	var data struct {
+		DocumentationUrl string `json:"documentation_url"`
+		Errors           []struct {
+			Code     string
+			Field    string
+			Message  string
+			Resource string
+		}
+		Message string `json:"message"`
+	}
+	json.Unmarshal(content, &data)
+
+	if data.Message == "Repository creation failed." {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": gin.H{
+			"repo_name": []string{"GitHub上已经存在该仓库，请使用其他仓库名。"},
+		}})
+		return
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": data.Message})
+	}
 }

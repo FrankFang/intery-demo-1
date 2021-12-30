@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"intery/server/database"
+	"intery/server/model"
 	"time"
 
 	"github.com/go-gormigrate/gormigrate/v2"
@@ -16,11 +17,11 @@ func NewMigrate() *gormigrate.Gormigrate {
 			ID: "1638802075376",
 			Migrate: func(d *gorm.DB) error {
 				type User struct {
-					gorm.Model
+					model.BaseModel
 					Name string `gorm:"type:varchar(100);not null"`
 				}
 				type Authorization struct {
-					gorm.Model
+					model.BaseModel
 					Provider         string    `gorm:"type:varchar(100);not null"`
 					UserId           uint      `gorm:"not null"`
 					VendorId         string    `gorm:"type:varchar(100);not null"`
@@ -35,11 +36,13 @@ func NewMigrate() *gormigrate.Gormigrate {
 					Expiry           time.Time `gorm:"default: null"`
 					TokenGeneratedAt time.Time `gorm:"not null;default: null"`
 				}
-				fmt.Println("created table User, Authorzation")
+				fmt.Println("created table User")
+				fmt.Println("created table Authorzation")
 				return d.AutoMigrate(&User{}, &Authorization{})
 			},
 			Rollback: func(d *gorm.DB) error {
-				fmt.Println("dropped table User, Authorzation")
+				fmt.Println("dropped table User")
+				fmt.Println("dropped table Authorzation")
 				return d.Migrator().DropTable("users", "authorizations")
 			},
 		},
@@ -47,7 +50,7 @@ func NewMigrate() *gormigrate.Gormigrate {
 			ID: "1639580496128",
 			Migrate: func(d *gorm.DB) error {
 				type Project struct {
-					gorm.Model
+					model.BaseModel
 					RepoName string `gorm:"type:varchar(100)"`
 					AppKind  string `gorm:"type:varchar(100)"`
 					RepoHome string `gorm:"type:varchar(1024)"`
@@ -59,6 +62,22 @@ func NewMigrate() *gormigrate.Gormigrate {
 			Rollback: func(d *gorm.DB) error {
 				fmt.Println("dropped table Project")
 				return d.Migrator().DropTable("projects")
+			},
+		},
+		{
+			ID: "1640795201612",
+			Migrate: func(d *gorm.DB) error {
+				type Deployment struct {
+					model.BaseModel
+					ContainerId uint `gorm:"not null"`
+					ProjectId   uint `gorm:"not null"`
+				}
+				fmt.Println("created table Deployment")
+				return d.AutoMigrate(&Deployment{})
+			},
+			Rollback: func(d *gorm.DB) error {
+				fmt.Println("dropped table Deployment")
+				return d.Migrator().DropTable("deployments")
 			},
 		},
 	})

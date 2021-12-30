@@ -2,7 +2,7 @@ package deploy
 
 import (
 	"fmt"
-	"io"
+	"os/exec"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -23,10 +23,6 @@ type Options struct {
 func CreateDockerContainer(ctx *gin.Context, opt Options) (containerId string, err error) {
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		return
-	}
-	_, err = cli.ImagePull(ctx, opt.ImageName, types.ImagePullOptions{})
 	if err != nil {
 		return
 	}
@@ -51,14 +47,14 @@ func CreateDockerContainer(ctx *gin.Context, opt Options) (containerId string, e
 	config := container.Config{
 		Image:      opt.ImageName,
 		WorkingDir: "/app",
-		Cmd:        []string{"/usr/local/bin/node", "server.js"},
+		Cmd:        []string{"/bin/sh", "-c", "echo fuck > /tmp/log; /usr/local/bin/node server.js 2>&1 >> /tmp/log"},
 		Env: []string{
 			fmt.Sprintf("PORT=/tmp/socket/%s", opt.SocketFileName),
 			"NODE_ENV=production",
 		},
 		AttachStdout: true,
 		AttachStderr: true,
-		Tty:          true,
+		Tty:          false,
 	}
 	hostConfig := container.HostConfig{
 		Mounts: []mount.Mount{
@@ -82,18 +78,12 @@ func CreateDockerContainer(ctx *gin.Context, opt Options) (containerId string, e
 	if err = cli.ContainerStart(ctx, body.ID, types.ContainerStartOptions{}); err != nil {
 		return body.ID, err
 	}
-	return body.ID, err
-}
-
-func GetContainerLogs(ctx *gin.Context, containerId string) (reader io.ReadCloser, err error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		return
+	// execute "docker logs"
+	cmd := exec.Command("docker", "logs", body.ID)
+	stdout, cmderr := cmd.Output()
+	if cmderr != nil {
+		fmt.Println(cmderr.Error())
 	}
-	reader, err = cli.ContainerLogs(ctx, containerId, types.ContainerLogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Follow:     true,
-	})
-	return
+	fmt.Print(stdout)
+	return body.ID, err
 }

@@ -95,7 +95,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	}
 	socketFileName := fmt.Sprintf("%s.sock", strconv.Itoa(int(project.ID)))
 	if err := os.RemoveAll(filepath.Join(socketDir, socketFileName)); err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
 	containerId, err := CreateDockerContainer(c, Options{
 		ImageName:      "node:latest",
