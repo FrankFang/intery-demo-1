@@ -69,8 +69,8 @@ func NewMigrate() *gormigrate.Gormigrate {
 			Migrate: func(d *gorm.DB) error {
 				type Deployment struct {
 					model.BaseModel
-					ContainerId uint `gorm:"not null"`
-					ProjectId   uint `gorm:"not null"`
+					ContainerId string `json:"container_id" gorm:"not null"`
+					ProjectId   uint   `json:"project_id" gorm:"not null"`
 				}
 				fmt.Println("created table Deployment")
 				return d.AutoMigrate(&Deployment{})

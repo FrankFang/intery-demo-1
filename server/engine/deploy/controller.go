@@ -5,6 +5,7 @@ import (
 	"intery/cmd/docker"
 	"intery/server/database"
 	"intery/server/engine/base"
+	"intery/server/model"
 	"io"
 	"io/ioutil"
 	"log"
@@ -141,7 +142,17 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	c.JSON(http.StatusOK, gin.H{"resource": gin.H{"containerId": containerId}})
+	d := database.GetQuery().Deployment
+	deployment := model.Deployment{
+		ProjectId:   project.ID,
+		ContainerId: containerId,
+	}
+	err = d.WithContext(c).Create(&deployment)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"resource": deployment})
 }
 
 func downloadFile(url string, filepath string) error {

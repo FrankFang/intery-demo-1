@@ -15,6 +15,7 @@ func Use(db *gorm.DB) *Query {
 	return &Query{
 		db:            db,
 		Authorization: newAuthorization(db),
+		Deployment:    newDeployment(db),
 		Project:       newProject(db),
 		User:          newUser(db),
 	}
@@ -24,6 +25,7 @@ type Query struct {
 	db *gorm.DB
 
 	Authorization authorization
+	Deployment    deployment
 	Project       project
 	User          user
 }
@@ -34,6 +36,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
 		db:            db,
 		Authorization: q.Authorization.clone(db),
+		Deployment:    q.Deployment.clone(db),
 		Project:       q.Project.clone(db),
 		User:          q.User.clone(db),
 	}
@@ -41,6 +44,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 
 type queryCtx struct {
 	Authorization authorizationDo
+	Deployment    deploymentDo
 	Project       projectDo
 	User          userDo
 }
@@ -48,6 +52,7 @@ type queryCtx struct {
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
 		Authorization: *q.Authorization.WithContext(ctx),
+		Deployment:    *q.Deployment.WithContext(ctx),
 		Project:       *q.Project.WithContext(ctx),
 		User:          *q.User.WithContext(ctx),
 	}

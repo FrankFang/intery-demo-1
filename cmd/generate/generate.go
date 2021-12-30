@@ -36,7 +36,7 @@ func Run() {
 
 	// apply basic crud api on structs or table models which is specified by table name with function
 	// GenerateModel/GenerateModelAs. And generator will generate table models' code when calling Excute.
-	g.ApplyBasic(model.User{}, model.Authorization{}, model.Project{})
+	g.ApplyBasic(model.User{}, model.Authorization{}, model.Project{}, model.Deployment{})
 
 	// apply diy interfaces on structs or table models
 	// g.ApplyInterface(func(method model.Method) {}, model.User{}, g.GenerateModel("company"))
