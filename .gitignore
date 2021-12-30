@@ -2,3 +2,4 @@
 /.idea
 /.vscode
 /userspace
+/config/nginx_default.conf
