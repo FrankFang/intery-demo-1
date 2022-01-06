@@ -2,7 +2,6 @@ package model
 
 import (
 	"crypto/rsa"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
@@ -17,12 +16,9 @@ type User struct {
 	Name string `gorm:"type:varchar(100);not null"`
 }
 
-func (u User) JWT() string {
-	token, err := createToken(u.ID)
-	if err != nil {
-		fmt.Println(err)
-	}
-	return fmt.Sprintf("%v", token)
+func (u User) JWT() (token string, err error) {
+	token, err = createToken(u.ID)
+	return
 }
 
 type CustomClaims struct {

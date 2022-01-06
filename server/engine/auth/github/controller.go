@@ -46,16 +46,15 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		})
 		return
 	}
-	// exchange code for token
 	token, err := conf.Exchange(c, p.Code)
 	if err != nil {
-		fmt.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"reason": "exchange token via code failed",
+		})
+		return
 	}
-	// create client with token
 	client := conf.Client(c, token)
 	defer client.CloseIdleConnections()
-
-	// get github user via client
 	for i := 0; i < 3; i++ {
 		response, err := client.Get("https://api.github.com/user")
 		if err != nil {
@@ -100,11 +99,13 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		auth.VendorId = fmt.Sprintf("%v", githubUser.Id)
 		database.GetQuery().WithContext(c).Authorization.Save(&auth)
 		if err = database.GetQuery().WithContext(c).Authorization.Save(&auth); err != nil {
-			panic(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 		}
-		c.JSON(200, gin.H{
-			"jwt": user.JWT(),
-		})
+		if t, err := user.JWT(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		} else {
+			c.JSON(http.StatusOK, gin.H{"jwt": t})
+		}
 		break
 	}
 	if !c.Writer.Written() {

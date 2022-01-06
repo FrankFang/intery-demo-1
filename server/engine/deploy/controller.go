@@ -81,7 +81,10 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	uz := unzip.New(archivePath, srcDir)
 	err = uz.Extract()
 	if err != nil {
-		fmt.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"reason": err.Error(),
+		})
+		return
 	}
 	var dirName string
 	if files, err := ioutil.ReadDir(srcDir); err != nil {

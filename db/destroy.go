@@ -13,13 +13,7 @@ func Drop() error {
 	host, user, name, password, port := database.GetDsn()
 	pgConn, err := pgconn.Connect(
 		context.Background(),
-		fmt.Sprintf(
-			"postgres://%s:%s@%s:%s/postgres",
-			user,
-			password,
-			host,
-			port,
-		),
+		fmt.Sprintf("postgres://%s:%s@%s:%s/postgres", user, password, host, port),
 	)
 	if err != nil {
 		log.Fatalln("pgconn failed to connect: ", err)

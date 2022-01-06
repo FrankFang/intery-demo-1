@@ -19,3 +19,5 @@ func New() gin.HandlerFunc {
 		MaxAge: 12 * time.Hour,
 	})
 }
+
+  

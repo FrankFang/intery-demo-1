@@ -6,6 +6,7 @@ import (
 	"intery/server/engine/auth/github"
 	"intery/server/engine/deploy"
 	"intery/server/engine/hi"
+	"intery/server/engine/me"
 	"intery/server/engine/project"
 	"intery/server/middlewares"
 
@@ -21,6 +22,8 @@ func NewRouter() *gin.Engine {
 	{
 		v1 := api.Group("v1")
 		{
+			m := me.Controller{}
+			v1.GET("/me", m.Show)
 			deploysGroups := v1.Group("deploys")
 			{
 				d := deploy.Controller{}

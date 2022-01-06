@@ -28,13 +28,30 @@ type BaseController struct {
 	auth   *model.Authorization
 }
 
-func (ctrl *BaseController) MustHasPage(c *gin.Context) (page int, err error) {
+func (ctrl *BaseController) MustHasPage(c *gin.Context) (page, perPage, offset int, err error) {
+	offsetString := c.DefaultQuery("offset", "0")
 	pageString := c.DefaultQuery("page", "1")
+	perPageString := c.DefaultQuery("per_page", "10")
 	page, err = strconv.Atoi(pageString)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"reason": "page 必须是数字",
 		})
+		return
+	}
+	perPage, err = strconv.Atoi(perPageString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"reason": "per_page 必须是数字",
+		})
+		return
+	}
+	offset, err = strconv.Atoi(offsetString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"reason": "offset 必须是数字",
+		})
+		return
 	}
 	return
 }

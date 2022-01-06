@@ -124,13 +124,6 @@ func ReloadNginx(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	// hijack, err := cli.ContainerExecAttach(ctx, exec.ID, types.ExecStartCheck{
-	// 	Detach: false,
-	// 	Tty:    false,
-	// })
-	// if err != nil {
-	// 	return
-	// }
 	err = cli.ContainerExecStart(ctx, exec.ID, types.ExecStartCheck{
 		Detach: false,
 		Tty:    false,
@@ -148,7 +141,5 @@ func ReloadNginx(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	// logs, err := ioutil.ReadAll(hijack.Reader)
-	// fmt.Println(logs)
 	return
 }

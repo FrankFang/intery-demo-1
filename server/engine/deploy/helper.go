@@ -2,7 +2,6 @@ package deploy
 
 import (
 	"fmt"
-	"os/exec"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -78,12 +77,5 @@ func CreateDockerContainer(ctx *gin.Context, opt Options) (containerId string, e
 	if err = cli.ContainerStart(ctx, body.ID, types.ContainerStartOptions{}); err != nil {
 		return body.ID, err
 	}
-	// execute "docker logs"
-	cmd := exec.Command("docker", "logs", body.ID)
-	stdout, cmderr := cmd.Output()
-	if cmderr != nil {
-		fmt.Println(cmderr.Error())
-	}
-	fmt.Print(stdout)
 	return body.ID, err
 }

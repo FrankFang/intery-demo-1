@@ -46,13 +46,14 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		Private: sdk.Bool(true),
 	})
 	if err != nil {
-		if err, ok := err.(*sdk.ErrorResponse); ok {
-			defer err.Response.Body.Close()
-			transformResponse(c, err.Response)
-			return
+		if resErr, ok := err.(*sdk.ErrorResponse); ok {
+			defer resErr.Response.Body.Close()
+			transformResponse(c, resErr.Response)
 		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 			log.Fatal("Create repo failed.", err)
 		}
+		return
 	}
 	repoContent, _, err := client.Repositories.CreateFile(c, auth.Login, params.RepoName, "README.md", &sdk.RepositoryContentFileOptions{
 		Content: []byte("# " + params.RepoName),
@@ -137,7 +138,7 @@ func (ctrl *Controller) Show(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"resource": project})
 }
 func (ctrl *Controller) Index(c *gin.Context) {
-	page, err := ctrl.MustHasPage(c)
+	page, perPage, offset, err := ctrl.MustHasPage(c)
 	if err != nil {
 		return
 	}
@@ -146,13 +147,29 @@ func (ctrl *Controller) Index(c *gin.Context) {
 		return
 	}
 	p := database.GetQuery().Project
-	projects, err := p.WithContext(c).Where(p.UserId.Eq(auth.UserId)).Limit(page * 10).Find()
+	query := p.WithContext(c).Where(p.UserId.Eq(auth.UserId))
+	projects, err := query.Offset(offset + perPage*(page-1)).Limit(perPage + 1).Find()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
+	has_next_page := len(projects) > perPage
+	if has_next_page {
+		projects = projects[:len(projects)-1]
+	}
+	count, err := query.Count()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"resource": projects,
+		"pager": gin.H{
+			"count":         count,
+			"per_page":      perPage,
+			"page":          page,
+			"has_next_page": has_next_page,
+		},
 	})
 }
 
