@@ -37,7 +37,7 @@ func (ctrl Controller) Callback(c *gin.Context) {
 	}
 	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	err = json.Unmarshal(body, &p)
 	if err != nil {

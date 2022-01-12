@@ -33,6 +33,7 @@ func newProject(db *gorm.DB) project {
 	_project.AppKind = field.NewString(tableName, "app_kind")
 	_project.RepoHome = field.NewString(tableName, "repo_home")
 	_project.UserId = field.NewUint(tableName, "user_id")
+	_project.LatestDeploymentId = field.NewUint(tableName, "latest_deployment_id")
 
 	_project.fillFieldMap()
 
@@ -42,15 +43,16 @@ func newProject(db *gorm.DB) project {
 type project struct {
 	projectDo projectDo
 
-	ALL       field.Field
-	ID        field.Uint
-	CreatedAt field.Time
-	UpdatedAt field.Time
-	DeletedAt field.Field
-	RepoName  field.String
-	AppKind   field.String
-	RepoHome  field.String
-	UserId    field.Uint
+	ALL                field.Field
+	ID                 field.Uint
+	CreatedAt          field.Time
+	UpdatedAt          field.Time
+	DeletedAt          field.Field
+	RepoName           field.String
+	AppKind            field.String
+	RepoHome           field.String
+	UserId             field.Uint
+	LatestDeploymentId field.Uint
 
 	fieldMap map[string]field.Expr
 }
@@ -67,6 +69,7 @@ func (p project) As(alias string) *project {
 	p.AppKind = field.NewString(alias, "app_kind")
 	p.RepoHome = field.NewString(alias, "repo_home")
 	p.UserId = field.NewUint(alias, "user_id")
+	p.LatestDeploymentId = field.NewUint(alias, "latest_deployment_id")
 
 	p.fillFieldMap()
 
@@ -86,7 +89,7 @@ func (p *project) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (p *project) fillFieldMap() {
-	p.fieldMap = make(map[string]field.Expr, 8)
+	p.fieldMap = make(map[string]field.Expr, 9)
 	p.fieldMap["id"] = p.ID
 	p.fieldMap["created_at"] = p.CreatedAt
 	p.fieldMap["updated_at"] = p.UpdatedAt
@@ -95,6 +98,7 @@ func (p *project) fillFieldMap() {
 	p.fieldMap["app_kind"] = p.AppKind
 	p.fieldMap["repo_home"] = p.RepoHome
 	p.fieldMap["user_id"] = p.UserId
+	p.fieldMap["latest_deployment_id"] = p.LatestDeploymentId
 }
 
 func (p project) clone(db *gorm.DB) project {

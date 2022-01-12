@@ -8,12 +8,15 @@ const requestListener = function (req, res) {
 
 const server = http.createServer(requestListener);
 
-server.on('error', appendLog)
-process.on('uncaughtException', error => appendLog(error));
-process.on('unhandledRejection', error => appendLog(error));
+server.on('error', console.log)
+process.on('uncaughtException', console.log)
+process.on('unhandledRejection', console.log)
 
-function appendLog(error) {
-  fs.appendFile('/tmp/log', error.message + '\n' + error.stack + '\n', (err) => { })
-}
+// function appendLog(error) {
+//   fs.appendFile('/tmp/log', error.message + '\n' + error.stack + '\n', (err) => { })
+// }
 
-server.listen(process.env.PORT || 8080);
+const port = process.env.PORT || 8080
+server.listen(port, () => {
+  console.log('I am listening ' + port)
+});

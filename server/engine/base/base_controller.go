@@ -2,6 +2,7 @@ package base
 
 import (
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -150,24 +151,73 @@ func (ctrl *BaseController) GetGithubClient(c *gin.Context, auth *model.Authoriz
 	client = sdk.NewClient(github.Conf.Client(c, &oauth2Token))
 	return
 }
+func (ctrl *BaseController) HandleGitHubError(c *gin.Context, err error) {
+	if resErr, ok := err.(*sdk.ErrorResponse); ok {
+		defer resErr.Response.Body.Close()
+		transformResponse(c, resErr.Response)
+	} else if err.Error() == "unexpected status code: 404 Not Found" {
+		c.AbortWithStatus(http.StatusNotFound)
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+	}
+}
 
 // helper
 func keyFunc(t *jwt.Token) (interface{}, error) {
 	if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
-		log.Fatal("method not supported")
+		log.Println("method not supported")
 	}
 	key, err := ioutil.ReadFile(os.Getenv("PUBLIC_KEY"))
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	block, _ := pem.Decode(key)
 	if block == nil || block.Type != "PUBLIC KEY" {
-		log.Fatal("failed to decode PEM block containing public key")
+		log.Println("failed to decode PEM block containing public key")
 	}
 
 	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return pub, nil
+}
+
+func transformResponse(c *gin.Context, response *http.Response) {
+	if response.ContentLength == 0 {
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"reason": "GitHub API error status code " + response.Status})
+		return
+	}
+	content, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Println("Read response body failed.", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
+	var data struct {
+		DocumentationUrl string `json:"documentation_url"`
+		Errors           []struct {
+			Code     string
+			Field    string
+			Message  string
+			Resource string
+		}
+		Message string `json:"message"`
+	}
+	err = json.Unmarshal(content, &data)
+	if err != nil {
+		log.Println("Unmarshal response body failed.", content, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
+
+	if data.Message == "Repository creation failed." {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": gin.H{
+			"repo_name": []string{"GitHub上已经存在该仓库，请使用其他仓库名。"},
+		}})
+		return
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": data.Message})
+	}
 }

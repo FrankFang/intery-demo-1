@@ -19,7 +19,7 @@ type Options struct {
 	Path           string
 }
 
-func CreateDockerContainer(ctx *gin.Context, opt Options) (containerId string, err error) {
+func CreateAndStartNodejsContainer(ctx *gin.Context, opt Options) (containerId string, err error) {
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
@@ -46,7 +46,8 @@ func CreateDockerContainer(ctx *gin.Context, opt Options) (containerId string, e
 	config := container.Config{
 		Image:      opt.ImageName,
 		WorkingDir: "/app",
-		Cmd:        []string{"/bin/sh", "-c", "echo fuck > /tmp/log; /usr/local/bin/node server.js 2>&1 >> /tmp/log"},
+		// Cmd:        []string{"/bin/sh", "-c", "echo fuck > /tmp/log; /usr/local/bin/node server.js 2>&1 >> /tmp/log"},
+		Cmd: []string{"/usr/local/bin/node", "server.js"},
 		Env: []string{
 			fmt.Sprintf("PORT=/tmp/socket/%s", opt.SocketFileName),
 			"NODE_ENV=production",

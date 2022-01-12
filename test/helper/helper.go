@@ -59,7 +59,7 @@ func SignIn(c *gin.Context, user *model.User) {
 	json.Unmarshal(w2.Body.Bytes(), &body)
 	jwt, ok := body["jwt"].(string)
 	if !ok {
-		log.Fatal("jwt not found")
+		log.Println("jwt not found")
 	}
 	c.Request.Header.Add("Authorization", "Bearer "+jwt)
 }

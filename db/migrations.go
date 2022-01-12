@@ -80,6 +80,32 @@ func NewMigrate() *gormigrate.Gormigrate {
 				return d.Migrator().DropTable("deployments")
 			},
 		},
+		{
+			ID: "1641917396596",
+			Migrate: func(d *gorm.DB) error {
+				type Project struct {
+					model.BaseModel
+					RepoName           string `gorm:"type:varchar(100)"`
+					AppKind            string `gorm:"type:varchar(100)"`
+					RepoHome           string `gorm:"type:varchar(1024)"`
+					UserId             uint   `gorm:"not null"`
+					LatestDeploymentId uint
+				}
+				fmt.Println("updated table Project")
+				return d.AutoMigrate(&Project{})
+			},
+			Rollback: func(d *gorm.DB) error {
+				type Project struct {
+					model.BaseModel
+					RepoName string `gorm:"type:varchar(100)"`
+					AppKind  string `gorm:"type:varchar(100)"`
+					RepoHome string `gorm:"type:varchar(1024)"`
+					UserId   uint   `gorm:"not null"`
+				}
+				fmt.Println("updated table Project")
+				return d.AutoMigrate(&Project{})
+			},
+		},
 	})
 	return migrations
 }

@@ -6,6 +6,7 @@ import (
 	"intery/server/engine/auth/github"
 	"intery/server/engine/deploy"
 	"intery/server/engine/hi"
+	"intery/server/engine/log"
 	"intery/server/engine/me"
 	"intery/server/engine/project"
 	"intery/server/middlewares"
@@ -47,6 +48,11 @@ func NewRouter() *gin.Engine {
 				a := gitea.Controller{}
 				authGroup.GET("/gitea", a.Show)
 				authGroup.GET("/gitea_callback", a.Callback)
+			}
+			logGroup := v1.Group("logs")
+			{
+				l := log.Controller{}
+				logGroup.GET("", l.Index)
 			}
 		}
 	}

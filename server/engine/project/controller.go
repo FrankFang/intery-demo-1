@@ -2,7 +2,6 @@ package project
 
 import (
 	"bytes"
-	"encoding/json"
 	"html/template"
 	"intery/server/database"
 	"intery/server/engine/auth/github"
@@ -32,7 +31,8 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		RepoName string `json:"repo_name" binding:"required"`
 	}
 	if err := c.BindJSON(&params); err != nil {
-		log.Fatal(err)
+		c.JSON(http.StatusBadRequest, gin.H{"reason": err.Error()})
+		return
 	}
 	user, auth, err := ctrl.GetUserAndAuth(c)
 	if err != nil {
@@ -46,13 +46,8 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		Private: sdk.Bool(true),
 	})
 	if err != nil {
-		if resErr, ok := err.(*sdk.ErrorResponse); ok {
-			defer resErr.Response.Body.Close()
-			transformResponse(c, resErr.Response)
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
-			log.Fatal("Create repo failed.", err)
-		}
+		ctrl.HandleGitHubError(c, err)
+		log.Println("Create repo failed.", err)
 		return
 	}
 	repoContent, _, err := client.Repositories.CreateFile(c, auth.Login, params.RepoName, "README.md", &sdk.RepositoryContentFileOptions{
@@ -60,23 +55,15 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		Message: sdk.String("Initial commit"),
 	})
 	if err != nil {
-		if err, ok := err.(*sdk.ErrorResponse); ok {
-			defer err.Response.Body.Close()
-			transformResponse(c, err.Response)
-			return
-		} else {
-			log.Fatal("Create file failed.", err)
-		}
+		ctrl.HandleGitHubError(c, err)
+		log.Println("Create file failed.", err)
+		return
 	}
 	tree, _, err := client.Git.GetTree(c, auth.Login, params.RepoName, *repoContent.SHA, true)
 	if err != nil {
-		if err, ok := err.(*sdk.ErrorResponse); ok {
-			defer err.Response.Body.Close()
-			transformResponse(c, err.Response)
-			return
-		} else {
-			log.Fatal("Get tree failed.", err)
-		}
+		ctrl.HandleGitHubError(c, err)
+		log.Println("Get tree failed.", err)
+		return
 	}
 	files := getNodejsAppFiles(struct{ Name string }{Name: params.RepoName})
 	fileTree := make([]*sdk.TreeEntry, 0, 128)
@@ -88,8 +75,13 @@ func (ctrl *Controller) Create(c *gin.Context) {
 			Content: sdk.String(file.Content),
 		})
 	}
-	newTree, _, _ := client.Git.CreateTree(c, auth.Login, params.RepoName, *tree.SHA, fileTree)
-	newCommit, _, _ := client.Git.CreateCommit(c, auth.Login, params.RepoName, &sdk.Commit{
+	newTree, _, err := client.Git.CreateTree(c, auth.Login, params.RepoName, *tree.SHA, fileTree)
+	if err != nil {
+		ctrl.HandleGitHubError(c, err)
+		log.Println("Create tree failed.", err)
+		return
+	}
+	newCommit, _, err := client.Git.CreateCommit(c, auth.Login, params.RepoName, &sdk.Commit{
 		Message: sdk.String("Second commit"),
 		Tree:    newTree,
 		Parents: []*sdk.Commit{
@@ -98,13 +90,23 @@ func (ctrl *Controller) Create(c *gin.Context) {
 			},
 		},
 	})
-	_, _, _ = client.Git.UpdateRef(c, auth.Login, params.RepoName, &sdk.Reference{
+	if err != nil {
+		ctrl.HandleGitHubError(c, err)
+		log.Println("Create commit failed.", err)
+		return
+	}
+	_, _, err = client.Git.UpdateRef(c, auth.Login, params.RepoName, &sdk.Reference{
 		Ref: sdk.String("refs/heads/main"),
 		Object: &sdk.GitObject{
 			SHA: newCommit.SHA,
 		},
 	}, false)
-	// create project and save to database
+	if err != nil {
+		ctrl.HandleGitHubError(c, err)
+		log.Println("Update ref failed.", err)
+		return
+	}
+
 	project := model.Project{
 		AppKind:  params.AppKind,
 		RepoName: params.RepoName,
@@ -113,7 +115,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	}
 	err = database.GetQuery().Project.WithContext(c).Create(&project)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	c.JSON(http.StatusCreated, gin.H{"resource": project})
 }
@@ -137,6 +139,7 @@ func (ctrl *Controller) Show(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"resource": project})
 }
+
 func (ctrl *Controller) Index(c *gin.Context) {
 	page, perPage, offset, err := ctrl.MustHasPage(c)
 	if err != nil {
@@ -158,6 +161,10 @@ func (ctrl *Controller) Index(c *gin.Context) {
 		projects = projects[:len(projects)-1]
 	}
 	count, err := query.Count()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 		return
@@ -204,35 +211,4 @@ func getNodejsAppFiles(data interface{}) (nodes []Node) {
 		return nil
 	})
 	return
-}
-
-func transformResponse(c *gin.Context, response *http.Response) {
-	c.Status(response.StatusCode)
-	if response.ContentLength == 0 {
-		return
-	}
-	content, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		log.Fatal("Read response body failed.", err)
-	}
-	var data struct {
-		DocumentationUrl string `json:"documentation_url"`
-		Errors           []struct {
-			Code     string
-			Field    string
-			Message  string
-			Resource string
-		}
-		Message string `json:"message"`
-	}
-	json.Unmarshal(content, &data)
-
-	if data.Message == "Repository creation failed." {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": gin.H{
-			"repo_name": []string{"GitHub上已经存在该仓库，请使用其他仓库名。"},
-		}})
-		return
-	} else {
-		c.JSON(http.StatusInternalServerError, gin.H{"reason": data.Message})
-	}
 }

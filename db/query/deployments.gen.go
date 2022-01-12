@@ -29,7 +29,7 @@ func newDeployment(db *gorm.DB) deployment {
 	_deployment.CreatedAt = field.NewTime(tableName, "created_at")
 	_deployment.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_deployment.DeletedAt = field.NewField(tableName, "deleted_at")
-	_deployment.ContainerId = field.NewUint(tableName, "container_id")
+	_deployment.ContainerId = field.NewString(tableName, "container_id")
 	_deployment.ProjectId = field.NewUint(tableName, "project_id")
 
 	_deployment.fillFieldMap()
@@ -45,7 +45,7 @@ type deployment struct {
 	CreatedAt   field.Time
 	UpdatedAt   field.Time
 	DeletedAt   field.Field
-	ContainerId field.Uint
+	ContainerId field.String
 	ProjectId   field.Uint
 
 	fieldMap map[string]field.Expr
@@ -59,7 +59,7 @@ func (d deployment) As(alias string) *deployment {
 	d.CreatedAt = field.NewTime(alias, "created_at")
 	d.UpdatedAt = field.NewTime(alias, "updated_at")
 	d.DeletedAt = field.NewField(alias, "deleted_at")
-	d.ContainerId = field.NewUint(alias, "container_id")
+	d.ContainerId = field.NewString(alias, "container_id")
 	d.ProjectId = field.NewUint(alias, "project_id")
 
 	d.fillFieldMap()

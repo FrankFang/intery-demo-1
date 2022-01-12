@@ -110,7 +110,7 @@ func (ctrl Controller) Callback(c *gin.Context) <span class="cov8" title="1">{
         }
         body, err := ioutil.ReadAll(c.Request.Body)
         if err != nil </span><span class="cov0" title="0">{
-                log.Fatal(err)
+                log.Println(err)
         }</span>
         <span class="cov8" title="1">err = json.Unmarshal(body, &amp;p)
         if err != nil </span><span class="cov0" title="0">{
@@ -220,7 +220,7 @@ func (ctrl *Controller) Create(c *gin.Context) <span class="cov8" title="1">{
                 RepoName string `json:"repo_name" binding:"required"`
         }
         if err := c.BindJSON(&amp;params); err != nil </span><span class="cov0" title="0">{
-                log.Fatal(err)
+                log.Println(err)
         }</span>
         <span class="cov8" title="1">user, auth, err := ctrl.GetUserAndAuth(c)
         if err != nil </span><span class="cov0" title="0">{
@@ -239,7 +239,7 @@ func (ctrl *Controller) Create(c *gin.Context) <span class="cov8" title="1">{
                         transformResponse(c, err.Response)
                         return
                 }</span> else<span class="cov0" title="0"> {
-                        log.Fatal("Create repo failed.", err)
+                        log.Println("Create repo failed.", err)
                 }</span>
         }
         <span class="cov8" title="1">repoContent, _, err := client.Repositories.CreateFile(c, auth.Login, params.RepoName, "README.md", &amp;sdk.RepositoryContentFileOptions{
@@ -252,7 +252,7 @@ func (ctrl *Controller) Create(c *gin.Context) <span class="cov8" title="1">{
                         transformResponse(c, err.Response)
                         return
                 }</span> else<span class="cov0" title="0"> {
-                        log.Fatal("Create file failed.", err)
+                        log.Println("Create file failed.", err)
                 }</span>
         }
         <span class="cov8" title="1">tree, _, err := client.Git.GetTree(c, auth.Login, params.RepoName, *repoContent.SHA, true)
@@ -262,7 +262,7 @@ func (ctrl *Controller) Create(c *gin.Context) <span class="cov8" title="1">{
                         transformResponse(c, err.Response)
                         return
                 }</span> else<span class="cov0" title="0"> {
-                        log.Fatal("Get tree failed.", err)
+                        log.Println("Get tree failed.", err)
                 }</span>
         }
         <span class="cov8" title="1">files := getNodejsAppFiles(struct{ Name string }{Name: params.RepoName})
@@ -300,7 +300,7 @@ func (ctrl *Controller) Create(c *gin.Context) <span class="cov8" title="1">{
         }
         err = database.GetQuery().Project.WithContext(c).Create(&amp;project)
         if err != nil </span><span class="cov0" title="0">{
-                log.Fatal(err)
+                log.Println(err)
         }</span>
         <span class="cov8" title="1">c.JSON(http.StatusCreated, gin.H{"resource": project})</span>
 }
@@ -345,7 +345,7 @@ func transformResponse(c *gin.Context, response *http.Response) <span class="cov
         }</span>
         <span class="cov0" title="0">content, err := ioutil.ReadAll(response.Body)
         if err != nil </span><span class="cov0" title="0">{
-                log.Fatal("Read response body failed.", err)
+                log.Println("Read response body failed.", err)
         }</span>
         <span class="cov0" title="0">c.Writer.Write(content)</span>
 }
