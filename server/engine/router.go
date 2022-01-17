@@ -37,6 +37,7 @@ func NewRouter() *gin.Engine {
 				projectsGroup.POST("/", p.Create)
 				projectsGroup.GET("/", p.Index)
 				projectsGroup.GET("/:id", p.Show)
+				projectsGroup.DELETE("/:id", p.Delete)
 			}
 			authGroup := v1.Group("auth")
 			{

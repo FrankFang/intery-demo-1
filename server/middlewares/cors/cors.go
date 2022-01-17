@@ -9,7 +9,7 @@ import (
 
 func New() gin.HandlerFunc {
 	return cors.New(cors.Config{
-		AllowMethods:     []string{"PUT", "PATCH", "POST"},
+		AllowMethods:     []string{"PUT", "PATCH", "POST", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -19,5 +19,3 @@ func New() gin.HandlerFunc {
 		MaxAge: 12 * time.Hour,
 	})
 }
-
-  

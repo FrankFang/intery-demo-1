@@ -24,9 +24,9 @@ import (
 )
 
 type BaseController struct {
-	userId uint
-	user   *model.User
-	auth   *model.Authorization
+	// userId uint
+	user *model.User
+	auth *model.Authorization
 }
 
 func (ctrl *BaseController) MustHasPage(c *gin.Context) (page, perPage, offset int, err error) {
@@ -69,9 +69,10 @@ func (ctrl *BaseController) MustSignIn(c *gin.Context) (userId uint, err error) 
 }
 
 func (ctrl *BaseController) GetUserIdFromHeader(c *gin.Context) (uint, error) {
-	if ctrl.userId != 0 {
-		return ctrl.userId, nil
-	}
+	// FIXME 不知道为什么 ctrl.userId 不会在请求结束后被清空
+	// if ctrl.userId != 0 {
+	// 	return ctrl.userId, nil
+	// }
 	bearer := c.Request.Header.Get("Authorization")
 	parts := strings.Split(bearer, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
@@ -89,8 +90,9 @@ func (ctrl *BaseController) GetUserIdFromHeader(c *gin.Context) (uint, error) {
 		err = errors.New("invalid claims")
 		return 0, err
 	}
-	ctrl.userId = uint(claims["user_id"].(float64))
-	return ctrl.userId, nil
+	// ctrl.userId = uint(claims["user_id"].(float64))
+	// return ctrl.userId, nil
+	return uint(claims["user_id"].(float64)), nil
 }
 
 func (ctrl *BaseController) MustAuth(c *gin.Context) (auth *model.Authorization, err error) {

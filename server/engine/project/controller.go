@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"intery/server/engine/base"
 
@@ -178,6 +179,31 @@ func (ctrl *Controller) Index(c *gin.Context) {
 			"has_next_page": has_next_page,
 		},
 	})
+}
+func (ctrl *Controller) Delete(c *gin.Context) {
+	_, err := ctrl.MustSignIn(c)
+	if err != nil {
+		return
+	}
+	idString := c.Param("id")
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"reason": err.Error()})
+		return
+	}
+	p := database.GetQuery().Project
+	project, err := p.WithContext(c).Where(p.ID.Eq(uint(id))).First()
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"reason": err.Error()})
+		return
+	}
+	_, err = p.WithContext(c).Where(p.ID.Eq(uint(id))).Update(p.DeletedAt, time.Now())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
+	project.DeletedAt.Time = time.Now()
+	c.JSON(http.StatusOK, gin.H{"resource": project})
 }
 
 // helper function
