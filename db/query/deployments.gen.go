@@ -31,6 +31,8 @@ func newDeployment(db *gorm.DB) deployment {
 	_deployment.DeletedAt = field.NewField(tableName, "deleted_at")
 	_deployment.ContainerId = field.NewString(tableName, "container_id")
 	_deployment.ProjectId = field.NewUint(tableName, "project_id")
+	_deployment.UserId = field.NewUint(tableName, "user_id")
+	_deployment.Status = field.NewString(tableName, "status")
 
 	_deployment.fillFieldMap()
 
@@ -47,6 +49,8 @@ type deployment struct {
 	DeletedAt   field.Field
 	ContainerId field.String
 	ProjectId   field.Uint
+	UserId      field.Uint
+	Status      field.String
 
 	fieldMap map[string]field.Expr
 }
@@ -61,6 +65,8 @@ func (d deployment) As(alias string) *deployment {
 	d.DeletedAt = field.NewField(alias, "deleted_at")
 	d.ContainerId = field.NewString(alias, "container_id")
 	d.ProjectId = field.NewUint(alias, "project_id")
+	d.UserId = field.NewUint(alias, "user_id")
+	d.Status = field.NewString(alias, "status")
 
 	d.fillFieldMap()
 
@@ -82,13 +88,15 @@ func (d *deployment) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (d *deployment) fillFieldMap() {
-	d.fieldMap = make(map[string]field.Expr, 6)
+	d.fieldMap = make(map[string]field.Expr, 8)
 	d.fieldMap["id"] = d.ID
 	d.fieldMap["created_at"] = d.CreatedAt
 	d.fieldMap["updated_at"] = d.UpdatedAt
 	d.fieldMap["deleted_at"] = d.DeletedAt
 	d.fieldMap["container_id"] = d.ContainerId
 	d.fieldMap["project_id"] = d.ProjectId
+	d.fieldMap["user_id"] = d.UserId
+	d.fieldMap["status"] = d.Status
 }
 
 func (d deployment) clone(db *gorm.DB) deployment {

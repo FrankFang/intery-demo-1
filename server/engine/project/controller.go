@@ -150,7 +150,7 @@ func (ctrl *Controller) Index(c *gin.Context) {
 		return
 	}
 	p := database.GetQuery().Project
-	query := p.WithContext(c).Where(p.UserId.Eq(auth.UserId))
+	query := p.WithContext(c).Where(p.UserId.Eq(auth.UserId)).Order(p.CreatedAt.Desc())
 	projects, err := query.Offset(offset + perPage*(page-1)).Limit(perPage + 1).Find()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})

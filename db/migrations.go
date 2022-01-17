@@ -1,12 +1,14 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"intery/server/database"
 	"intery/server/model"
 	"time"
 
 	"github.com/go-gormigrate/gormigrate/v2"
+	"gorm.io/gen"
 	"gorm.io/gorm"
 )
 
@@ -104,6 +106,54 @@ func NewMigrate() *gormigrate.Gormigrate {
 				}
 				fmt.Println("updated table Project")
 				return d.AutoMigrate(&Project{})
+			},
+		}, {
+			ID: "1642003457442",
+			Migrate: func(d *gorm.DB) error {
+				func() {
+					type Deployment struct {
+						model.BaseModel
+						ContainerId string `json:"container_id" gorm:"not null"`
+						ProjectId   uint   `json:"project_id" gorm:"not null"`
+						UserId      uint   `json:"user_id"`
+						Status      string `json:"status"`
+					}
+					d.AutoMigrate(&Deployment{})
+				}()
+				dep := database.GetQuery().Deployment
+				deployments := []*model.Deployment{}
+				c := context.Background()
+				err := dep.WithContext(c).FindInBatches(&deployments, 100, func(tx gen.Dao, batch int) error {
+					for _, deployment := range deployments {
+						p := database.GetQuery().Project
+						project, _ := p.WithContext(c).Where(p.ID.Eq(deployment.ProjectId)).First()
+						deployment.UserId = project.UserId
+						deployment.Status = "removed"
+					}
+					tx.Save(deployments)
+					return nil
+				})
+				if err != nil {
+					return err
+				}
+				type Deployment struct {
+					model.BaseModel
+					ContainerId string `json:"container_id" gorm:"not null"`
+					ProjectId   uint   `json:"project_id" gorm:"not null"`
+					UserId      uint   `json:"user_id" gorm:"not null"`
+					Status      string `json:"status" gorm:"not null"`
+				}
+				fmt.Println("updated table Deployment")
+				return d.AutoMigrate(&Deployment{})
+			},
+			Rollback: func(d *gorm.DB) error {
+				type Deployment struct {
+					model.BaseModel
+					ContainerId string `json:"container_id" gorm:"not null"`
+					ProjectId   uint   `json:"project_id" gorm:"not null"`
+				}
+				fmt.Println("updated table Deployment")
+				return d.AutoMigrate(&Deployment{})
 			},
 		},
 	})

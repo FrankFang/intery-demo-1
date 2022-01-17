@@ -3,6 +3,8 @@ package deploy
 import (
 	"fmt"
 	"intery/cmd/docker"
+	"intery/lib/unzip"
+	"intery/server/config/dir"
 	"intery/server/database"
 	"intery/server/engine/base"
 	"intery/server/model"
@@ -15,12 +17,54 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/artdarek/go-unzip"
 	"github.com/gin-gonic/gin"
 )
 
 type Controller struct {
 	base.BaseController
+}
+
+func (ctrl *Controller) Index(c *gin.Context) {
+	page, perPage, offset, err := ctrl.MustHasPage(c)
+	if err != nil {
+		return
+	}
+	auth, err := ctrl.MustAuth(c)
+	if err != nil {
+		return
+	}
+	projectIdString := c.Query("project_id")
+	projectId, err := strconv.Atoi(projectIdString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"reason": "project_id 必须是一个数字"})
+		return
+	}
+	db := database.GetDB()
+	q := db.Model(model.Deployment{}).
+		Where("user_id = ?", auth.UserId).
+		Where("project_id = ?", projectId).
+		Order("created_at desc")
+	d := database.GetQuery().Deployment
+	query := d.WithContext(c).Where(d.UserId.Eq(auth.UserId)).Where(d.ProjectId.Eq(uint(projectId))).Order(d.CreatedAt.Desc())
+	deployments, err := query.Offset(offset + perPage*(page-1)).Limit(perPage).Debug().Find()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
+	var count int64
+	q.Count(&count)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"resource": deployments,
+		"pager": gin.H{
+			"count":    count,
+			"per_page": perPage,
+			"page":     page,
+		},
+	})
 }
 
 func (ctrl *Controller) Create(c *gin.Context) {
@@ -55,19 +99,14 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		return
 	}
 	cwd, _ := os.Getwd()
-	userDir := filepath.Join(cwd, "/userspace/", strconv.Itoa(int(user.ID)))
-	if err := os.RemoveAll(userDir); err != nil {
-		log.Println("Remove userDir failed. ", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
-		return
-	}
-	if err := os.MkdirAll(userDir, os.ModePerm); err != nil {
+	userDir := dir.EnsureUserDir(user.ID)
+	if err != nil {
 		log.Println("Make userDir failed. ", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 		return
 	}
 
-	projectDir := filepath.Join(userDir, strconv.Itoa(int(project.ID)))
+	projectDir := dir.EnsureProjectDir(userDir, user.ID)
 	if err := os.MkdirAll(projectDir, os.ModePerm); err != nil {
 		log.Println("Make projectDir failed. ", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
@@ -93,8 +132,8 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		return
 	}
 
-	uz := unzip.New(archivePath, srcDir)
-	err = uz.Extract()
+	uz := unzip.New()
+	_, err = uz.Extract(archivePath, srcDir)
 	if err != nil {
 		log.Println("Extract archive failed. ", archivePath, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
@@ -119,9 +158,25 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 		return
 	}
+	d := database.GetQuery().Deployment
+
+	err = RemoveCurrentContainer(c, project.LatestDeploymentId)
+	if err != nil {
+		log.Println("Remove current container failed. ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
+	_, err = d.WithContext(c).Where(d.ID.Eq(project.LatestDeploymentId)).UpdateColumn(d.Status, "removed")
+	if err != nil {
+		log.Println("Update deployment's status failed. ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
+
 	containerId, err := CreateAndStartNodejsContainer(c, Options{
 		ImageName:      "node:latest",
 		ContainerName:  fmt.Sprintf("app_%d_%d", user.ID, project.ID),
+		ProjectDir:     projectDir,
 		SocketDir:      socketDir,
 		SocketFileName: socketFileName,
 		Path:           filepath.Join(srcDir, dirName),
@@ -166,10 +221,11 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 		return
 	}
-	d := database.GetQuery().Deployment
 	deployment := model.Deployment{
 		ProjectId:   project.ID,
 		ContainerId: containerId,
+		UserId:      auth.UserId,
+		Status:      "running",
 	}
 	err = d.WithContext(c).Create(&deployment)
 	if err != nil {
