@@ -3,8 +3,7 @@ package docker
 import (
 	"context"
 	"errors"
-	"os"
-	"path/filepath"
+	"intery/server/config/dir"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -62,18 +61,17 @@ func createNginxContainer(ctx context.Context, cli *client.Client) (containerId 
 		Image:        "nginx",
 		ExposedPorts: nat.PortSet{"80": struct{}{}},
 	}
-	cwd, _ := os.Getwd()
 	hostConfig := container.HostConfig{
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",
-				Target: "/etc/nginx/conf.d/default.conf",
-				Source: filepath.Join(cwd, "config/nginx_default.conf"),
+				Target: "/etc/nginx/conf.d",
+				Source: dir.GetNginxConfigDir(),
 			},
 			{
 				Type:   "bind",
 				Target: "/tmp/socket",
-				Source: filepath.Join(cwd, "userspace/socket/"),
+				Source: dir.GetSocketDir(),
 			},
 		},
 		PortBindings: nat.PortMap{

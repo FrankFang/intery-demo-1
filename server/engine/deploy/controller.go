@@ -98,7 +98,6 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		log.Println("Get archive link failed. ", err)
 		return
 	}
-	cwd, _ := os.Getwd()
 	userDir := dir.EnsureUserDir(user.ID)
 	if err != nil {
 		log.Println("Make userDir failed. ", err)
@@ -114,8 +113,8 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	}
 	archivePath := filepath.Join(projectDir, "src.zip")
 	srcDir := filepath.Join(projectDir, "src")
-	socketDir := filepath.Join(cwd, "userspace", "socket")
-	confPath := filepath.Join(cwd, "config", "nginx_default.conf")
+	socketDir := dir.GetSocketDir()
+	confPath := filepath.Join(dir.GetNginxConfigDir(), "default.conf")
 	if err := os.MkdirAll(socketDir, os.ModePerm); err != nil {
 		log.Println("Make socketDir failed. ", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
@@ -186,7 +185,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": "创建容器失败"})
 		return
 	}
-	comments := "# Append content below"
+	comments := "# Placeholder"
 	content, err := ioutil.ReadFile(confPath)
 	if err != nil {
 		log.Println("Read confPath failed. ", confPath, err)
@@ -196,7 +195,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	s := string(content)
 	if !strings.Contains(s, fmt.Sprintf("location /%d/", project.ID)) {
 		s = strings.Replace(s, comments, comments+"\n"+fmt.Sprintf(`
-	location /%d/ {
+	location /preview/%d/ {
 		proxy_pass http://upstream_%d;
 		proxy_set_header            Host $host;
 		proxy_set_header            X-Real-IP $remote_addr;

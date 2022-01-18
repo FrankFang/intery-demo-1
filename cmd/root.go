@@ -6,9 +6,9 @@ import (
 	"intery/cmd/generate"
 	"intery/db"
 	"intery/server"
+	"intery/server/config/dir"
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 )
@@ -74,12 +74,8 @@ var rootCmd = &cli.App{
 					Name: "clear",
 					Action: func(c *cli.Context) error {
 						// remove all files in /tmp/socket
-						cwd, err := os.Getwd()
-						if err != nil {
-							return err
-						}
-						socketDir := filepath.Join(cwd, "userspace/socket")
-						err = os.RemoveAll(socketDir)
+						socketDir := dir.GetSocketDir()
+						err := os.RemoveAll(socketDir)
 						if err != nil {
 							return err
 						}

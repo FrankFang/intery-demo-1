@@ -18,3 +18,21 @@ func EnsureProjectDir(userDir string, projectId uint) (projectDir string) {
 	os.MkdirAll(projectDir, os.ModePerm)
 	return
 }
+
+func GetNginxConfigDir() (nginxConfigPath string) {
+	nginxConfigPath = os.Getenv("NGINX_CONFIG_DIR")
+	if nginxConfigPath == "" {
+		cwd, _ := os.Getwd()
+		nginxConfigPath = filepath.Join(cwd, "config", "nginx")
+	}
+	return
+}
+
+func GetSocketDir() (socketDir string) {
+	socketDir = os.Getenv("SOCKET_DIR")
+	if socketDir == "" {
+		cwd, _ := os.Getwd()
+		socketDir = filepath.Join(cwd, "userspace", "socket")
+	}
+	return
+}

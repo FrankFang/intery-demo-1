@@ -1,13 +1,12 @@
 package server
 
 import (
-	"intery/server/config"
 	"intery/server/database"
 	"intery/server/engine"
+	"os"
 )
 
 func Run() error {
-	config.Init()
 	err := database.Init()
 	if err != nil {
 		panic(err)
@@ -16,6 +15,11 @@ func Run() error {
 	if err != nil {
 		return err
 	} else {
-		return app.Run(config.GetString("port"))
+
+		if socket := os.Getenv("SOCKET"); socket != "" {
+			return app.RunUnix(socket)
+		} else {
+			return app.Run("0.0.0.0:8080")
+		}
 	}
 }

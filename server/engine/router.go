@@ -25,6 +25,7 @@ func NewRouter() *gin.Engine {
 		{
 			m := me.Controller{}
 			v1.GET("/me", m.Show)
+			v1.GET("/hi", h.Show)
 			deploymentsGroup := v1.Group("deployments")
 			{
 				d := deploy.Controller{}
