@@ -3,6 +3,7 @@ package project
 import (
 	"bytes"
 	"html/template"
+	"intery/server/config/dir"
 	"intery/server/database"
 	"intery/server/engine/auth/github"
 	"intery/server/model"
@@ -220,21 +221,40 @@ func getNodejsAppFiles(data interface{}) (nodes []Node) {
 			currentDir = filepath.Dir(currentDir)
 		}
 	}
-	dir := filepath.Join(currentDir, "server/app_templates/nodejs")
-	filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+	d := dir.GetAppTemplatesDir("nodejs")
+	err := filepath.Walk(d, func(path string, f os.FileInfo, err error) error {
+		if err != nil {
+			log.Println(err)
+			return err
+		}
 		if f.IsDir() {
 			return nil
 		}
-		content, _ := ioutil.ReadFile(path)
-		t, _ := template.New("text").Parse(string(content))
+		content, err := ioutil.ReadFile(path)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		t, err := template.New("text").Parse(string(content))
+		if err != nil {
+			log.Println(err)
+			return err
+		}
 		var b bytes.Buffer
 		t.Execute(&b, data)
-		relativePath, _ := filepath.Rel(dir, path)
+		relativePath, err := filepath.Rel(d, path)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
 		nodes = append(nodes, Node{
 			Path:    relativePath,
 			Content: b.String(),
 		})
 		return nil
 	})
+	if err != nil {
+		log.Println(err)
+	}
 	return
 }

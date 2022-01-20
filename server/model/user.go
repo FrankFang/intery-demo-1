@@ -3,6 +3,7 @@ package model
 import (
 	"crypto/rsa"
 	"io/ioutil"
+	"log"
 	"os"
 	"time"
 
@@ -37,11 +38,11 @@ func createToken(userId uint) (string, error) {
 
 	signBytes, err := ioutil.ReadFile(os.Getenv("PRIVATE_KEY"))
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 	signKey, err = jwt.ParseRSAPrivateKeyFromPEM(signBytes)
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 	return t.SignedString(signKey)
 }

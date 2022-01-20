@@ -36,3 +36,13 @@ func GetSocketDir() (socketDir string) {
 	}
 	return
 }
+
+func GetAppTemplatesDir(appKind string) (appTemplatesDir string) {
+	appTemplatesDir = os.Getenv("APP_TEMPLATES_DIR")
+	if appTemplatesDir == "" {
+		cwd, _ := os.Getwd()
+		appTemplatesDir = filepath.Join(cwd, "server/app_templates")
+	}
+	appTemplatesDir = filepath.Join(appTemplatesDir, appKind)
+	return
+}

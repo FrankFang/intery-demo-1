@@ -7,6 +7,7 @@ require (
 	github.com/dchest/uniuri v0.0.0-20200228104902-7aecb25e1fe5
 	github.com/docker/docker v20.10.12+incompatible
 	github.com/docker/go-connections v0.4.0
+	github.com/getsentry/sentry-go v0.12.0
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-contrib/pprof v1.3.0
 	github.com/gin-gonic/gin v1.7.7

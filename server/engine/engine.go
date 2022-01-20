@@ -14,6 +14,7 @@ func Init() (*gin.Engine, error) {
 	} else {
 		gin.SetMode("debug")
 	}
+
 	r := NewRouter()
 	err := r.SetTrustedProxies(nil)
 	if err != nil {

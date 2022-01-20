@@ -159,11 +159,16 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	}
 	d := database.GetQuery().Deployment
 
-	err = RemoveCurrentContainer(c, project.LatestDeploymentId)
-	if err != nil {
-		log.Println("Remove current container failed. ", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
-		return
+	if project.LatestDeploymentId != 0 {
+		err = RemoveCurrentContainer(c, project.LatestDeploymentId)
+		if err != nil {
+			log.Println("Remove current container failed. ", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"reason":        err.Error(),
+				"deployment_id": project.LatestDeploymentId,
+			})
+			return
+		}
 	}
 	_, err = d.WithContext(c).Where(d.ID.Eq(project.LatestDeploymentId)).UpdateColumn(d.Status, "removed")
 	if err != nil {

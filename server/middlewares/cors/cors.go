@@ -1,6 +1,7 @@
 package cors
 
 import (
+	"intery/server/config"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -14,7 +15,7 @@ func New() gin.HandlerFunc {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
-			return origin == "http://localhost:3000" || origin == "http://127.0.0.1:3000"
+			return origin == config.GetDomain()
 		},
 		MaxAge: 12 * time.Hour,
 	})

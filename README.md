@@ -38,6 +38,8 @@ export PRIVATE_KEY="/home/intery/keys/id_rsa"
 export PUBLIC_KEY="/home/intery/keys/id_rsa.pub"
 export NGINX_CONFIG_PATH="/home/intery/config/nginx_default.conf"
 export SOCKET_DIR="/home/intery/socket"
+export GITHUB_ID=
+export GITHUB_SECRET=
 ```
 
 ## 上传 go 二进制文件
@@ -57,6 +59,9 @@ docker run --name $DB_HOST -e POSTGRES_USER=$DB_USER -e POSTGRES_PASSWORD=$DB_PA
 cd /home/intery/backend
 ./intery task db:reset
 ```
+
+## 启动 Nginx
+
 
 
 

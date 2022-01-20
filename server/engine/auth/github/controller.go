@@ -97,7 +97,6 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		auth.AvatarUrl = githubUser.AvatarUrl
 		auth.Name = githubUser.Name
 		auth.VendorId = fmt.Sprintf("%v", githubUser.Id)
-		database.GetQuery().WithContext(c).Authorization.Save(&auth)
 		if err = database.GetQuery().WithContext(c).Authorization.Save(&auth); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 		}

@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"intery/server/engine/auth/gitea"
 	"intery/server/engine/auth/gitee"
 	"intery/server/engine/auth/github"
@@ -11,10 +12,16 @@ import (
 	"intery/server/engine/project"
 	"intery/server/middlewares"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 )
 
 func NewRouter() *gin.Engine {
+	if err := sentry.Init(sentry.ClientOptions{
+		Dsn: "https://examplePublicKey@o0.ingest.sentry.io/0",
+	}); err != nil {
+		fmt.Printf("Sentry initialization failed: %v\n", err)
+	}
 	router := gin.Default()
 	router.Use(middlewares.New()...)
 	h := hi.Controller{}
