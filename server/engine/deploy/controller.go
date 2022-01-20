@@ -248,6 +248,22 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"resource": deployment})
 }
 
+func (ctrl *Controller) Show(c *gin.Context) {
+	idString := c.Param("id")
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"reason": "id is not a number"})
+		return
+	}
+	d := database.GetQuery().Deployment
+	deployment, err := d.WithContext(c).Where(d.ID.Eq(uint(id))).First()
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"reason": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"resource": deployment})
+}
+
 func downloadFile(url string, filepath string) error {
 	resp, err := http.Get(url)
 	if err != nil {
