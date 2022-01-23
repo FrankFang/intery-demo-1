@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"fmt"
+	"intery/cmd/docker"
 	"intery/server/config/dir"
 	"intery/server/database"
 	"io"
@@ -19,7 +20,7 @@ import (
 )
 
 type Options struct {
-	ImageName      string
+	AppKind        string
 	ContainerName  string
 	ProjectDir     string
 	SocketDir      string
@@ -29,62 +30,71 @@ type Options struct {
 
 func RemoveCurrentContainer(c *gin.Context, deploymentId uint) error {
 	d := database.GetQuery().Deployment
-	deployment, err := d.WithContext(c).Where(d.ID.Eq(deploymentId)).Where(d.Status.Eq("running")).First()
+	deployment, err := d.WithContext(c).Where(d.ID.Eq(deploymentId)).First()
 	if err != nil {
 		return err
 	}
-
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
 	}
-	logReader, err := cli.ContainerLogs(c, deployment.ContainerId, types.ContainerLogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Follow:     true,
-		Tail:       "10000",
-	})
-	if err != nil {
-		log.Println("Get container logs failed. ", err)
-		return err
-	}
-	userDir := dir.EnsureUserDir(deployment.UserId)
-	projectDir := dir.EnsureProjectDir(userDir, deployment.ProjectId)
+	if deployment.Status == "running" {
+		logReader, err := cli.ContainerLogs(c, deployment.ContainerId, types.ContainerLogsOptions{
+			ShowStdout: true,
+			ShowStderr: true,
+			Follow:     true,
+			Tail:       "10000",
+		})
+		if err != nil {
+			log.Println("Get container logs failed. ", err)
+			return err
+		}
+		userDir := dir.EnsureUserDir(deployment.UserId)
+		projectDir := dir.EnsureProjectDir(userDir, deployment.ProjectId)
 
-	r := dlog.NewReader(logReader)
-	file, err := os.Create(filepath.Join(projectDir, deployment.ContainerId+"_log"))
+		r := dlog.NewReader(logReader)
+		file, err := os.Create(filepath.Join(projectDir, deployment.ContainerId+"_log"))
 
-	if err != nil {
-		log.Println("Create file failed. ", err)
-		return err
+		if err != nil {
+			log.Println("Create file failed. ", err)
+			return err
+		}
+		defer file.Close()
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+			logReader.Close()
+		}()
+		io.Copy(file, r)
 	}
-	defer file.Close()
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		logReader.Close()
-	}()
-	io.Copy(file, r)
-	err = cli.ContainerRemove(c, deployment.ContainerId, types.ContainerRemoveOptions{
+	cli.ContainerRemove(c, deployment.ContainerId, types.ContainerRemoveOptions{
 		Force: true,
 	})
-	return err
+	return nil
 }
 
-func CreateAndStartNodejsContainer(c *gin.Context, opt Options) (string, error) {
+func CreateAndStartContainer(c *gin.Context, opt Options) (string, error) {
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return "", err
 	}
+	imageName := ""
+	command := ""
+	if opt.AppKind == "nodejs" {
+		imageName = "node:16.13"
+		command = "npm i --registry=https://registry.npmmirror.com && node server.js"
+	} else if opt.AppKind == "golang" {
+		imageName = "golang:1.17.6"
+		command = "go env -w GOPROXY=https://goproxy.cn,direct && go run main.go"
+	}
 
 	config := container.Config{
-		Image:      opt.ImageName,
+		Image:      imageName,
 		WorkingDir: "/app",
-		// Cmd:        []string{"/bin/sh", "-c", "echo fuck > /tmp/log; /usr/local/bin/node server.js 2>&1 >> /tmp/log"},
-		Cmd: []string{"/usr/local/bin/node", "server.js"},
+		Cmd:        []string{"/bin/sh", "-c", command},
+		// Cmd: []string{"/usr/local/bin/node", "server.js"},
 		Env: []string{
-			fmt.Sprintf("PORT=/tmp/socket/%s", opt.SocketFileName),
-			"NODE_ENV=production",
+			fmt.Sprintf("SOCKET=/tmp/socket/%s", opt.SocketFileName),
 		},
 		AttachStdout: true,
 		AttachStderr: true,
@@ -105,12 +115,13 @@ func CreateAndStartNodejsContainer(c *gin.Context, opt Options) (string, error) 
 			},
 		},
 	}
-	body, err := cli.ContainerCreate(c, &config, &hostConfig, nil, nil, opt.ContainerName)
+	container, err := cli.ContainerCreate(c, &config, &hostConfig, nil, nil, opt.ContainerName)
 	if err != nil {
-		return body.ID, err
+		return container.ID, err
 	}
-	if err = cli.ContainerStart(c, body.ID, types.ContainerStartOptions{}); err != nil {
-		return body.ID, err
+	if err = cli.ContainerStart(c, container.ID, types.ContainerStartOptions{}); err != nil {
+		return container.ID, err
 	}
-	return body.ID, err
+	err = docker.ReloadNginx(c)
+	return container.ID, err
 }

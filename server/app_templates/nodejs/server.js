@@ -3,20 +3,16 @@ const fs = require('fs')
 
 const requestListener = function (req, res) {
   res.writeHead(200);
-  res.end('Hello, World!');
+  res.end('你好，世界！');
 }
 
 const server = http.createServer(requestListener);
 
-server.on('error', console.log)
-process.on('uncaughtException', console.log)
-process.on('unhandledRejection', console.log)
-
-// function appendLog(error) {
-//   fs.appendFile('/tmp/log', error.message + '\n' + error.stack + '\n', (err) => { })
-// }
-
-const port = process.env.PORT || 8080
-server.listen(port, () => {
-  console.log('I am listening ' + port)
+const socket = process.env.SOCKET
+if (!socket) {
+  console.log("未指定 socket")
+  process.exit(1)
+}
+server.listen(socket, () => {
+  console.log('I am listening on ' + socket)
 });

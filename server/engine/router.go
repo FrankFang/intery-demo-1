@@ -38,6 +38,7 @@ func NewRouter() *gin.Engine {
 				d := deploy.Controller{}
 				deploymentsGroup.POST("/", d.Create)
 				deploymentsGroup.GET("/", d.Index)
+				deploymentsGroup.GET("/:id", d.Show)
 			}
 			projectsGroup := v1.Group("projects")
 			{

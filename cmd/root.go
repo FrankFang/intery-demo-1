@@ -64,9 +64,10 @@ var rootCmd = &cli.App{
 						ctx := context.Background()
 						containerId, err := docker.StartNginxContainer(ctx)
 						if err != nil {
+							log.Fatal("Start nginx container failed. ", err)
 							return err
 						}
-						log.Println(containerId)
+						log.Println("container id: ", containerId)
 						return nil
 					},
 				},

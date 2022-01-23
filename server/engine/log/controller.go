@@ -41,7 +41,6 @@ func init() {
 }
 
 func (ctrl *Controller) Index(c *gin.Context) {
-	log.Println("11111111111111")
 	deploymentIdString := c.Query("deployment_id")
 	deploymentId, err := strconv.Atoi(deploymentIdString)
 	if err != nil {
@@ -54,13 +53,11 @@ func (ctrl *Controller) Index(c *gin.Context) {
 		// c.JSON(http.StatusNotFound, gin.H{"reason": err.Error()})
 		panic(err)
 	}
-	log.Println("4444444444444444444")
 
 	logChan := make(chan string)
 	close := make(chan bool, 1)
 	quit := make(chan bool, 1)
 
-	log.Println("33333333333333333333")
 	if deployment.Status != "running" {
 		go func() {
 			userDir := dir.EnsureUserDir(deployment.UserId)
@@ -83,9 +80,7 @@ func (ctrl *Controller) Index(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 			return
 		}
-		log.Println("555555555555555555555555")
 		go func(logChan chan string) {
-			log.Println("888888888888888888")
 			defer logReader.Close()
 			r := dlog.NewReader(logReader)
 			s := bufio.NewScanner(r)
@@ -97,8 +92,6 @@ func (ctrl *Controller) Index(c *gin.Context) {
 			}
 		}(logChan)
 	}
-
-	log.Println("666666666666666666666")
 	sse, err := sseApi.broker.Connect(fmt.Sprintf("%v", rand.Int63()), c.Writer, c.Request)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
@@ -106,7 +99,6 @@ func (ctrl *Controller) Index(c *gin.Context) {
 	}
 
 	go func() {
-		log.Println("7777777777777777777777")
 		count := 0
 		for {
 			select {
@@ -119,15 +111,9 @@ func (ctrl *Controller) Index(c *gin.Context) {
 					Data:  "",
 				})
 			case logs := <-logChan:
-				log.Println("101010101010101010", logs)
 				sse.Send(net.StringEvent{
 					Id:    fmt.Sprintf("%d", count),
 					Event: "log",
-					Data:  logs,
-				})
-				sse.Send(net.StringEvent{
-					Id:    fmt.Sprintf("%d", count),
-					Event: "message",
 					Data:  logs,
 				})
 				count++
@@ -135,8 +121,6 @@ func (ctrl *Controller) Index(c *gin.Context) {
 		}
 	}()
 
-	log.Println("9999999999999999")
 	<-sse.Done()
 	quit <- true
-	log.Println("2222222222")
 }

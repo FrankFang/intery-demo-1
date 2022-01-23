@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 )
 
@@ -11,7 +10,6 @@ func Init() {
 
 func GetDomain() (domain string) {
 	domain = os.Getenv("DOMAIN")
-	log.Println("domain: " + domain)
 	if domain == "" {
 		domain = "http://127.0.0.1:3000"
 	}

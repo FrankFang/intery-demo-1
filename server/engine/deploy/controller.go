@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -105,13 +106,13 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		return
 	}
 
-	projectDir := dir.EnsureProjectDir(userDir, user.ID)
+	projectDir := dir.EnsureProjectDir(userDir, project.ID)
 	if err := os.MkdirAll(projectDir, os.ModePerm); err != nil {
 		log.Println("Make projectDir failed. ", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 		return
 	}
-	archivePath := filepath.Join(projectDir, "src.zip")
+	archivePath := filepath.Join(projectDir, fmt.Sprintf("src-%d.zip", time.Now().Unix()))
 	srcDir := filepath.Join(projectDir, "src")
 	socketDir := dir.GetSocketDir()
 	confPath := filepath.Join(dir.GetNginxConfigDir(), "default.conf")
@@ -177,8 +178,8 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		return
 	}
 
-	containerId, err := CreateAndStartNodejsContainer(c, Options{
-		ImageName:      "node:latest",
+	containerId, err := CreateAndStartContainer(c, Options{
+		AppKind:        project.AppKind,
 		ContainerName:  fmt.Sprintf("app_%d_%d", user.ID, project.ID),
 		ProjectDir:     projectDir,
 		SocketDir:      socketDir,
@@ -198,7 +199,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		return
 	}
 	s := string(content)
-	if !strings.Contains(s, fmt.Sprintf("location /%d/", project.ID)) {
+	if !strings.Contains(s, fmt.Sprintf("location /preview/%d/", project.ID)) {
 		s = strings.Replace(s, comments, comments+"\n"+fmt.Sprintf(`
 	location /preview/%d/ {
 		proxy_pass http://upstream_%d;

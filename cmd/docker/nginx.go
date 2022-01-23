@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"intery/server/config/dir"
+	"log"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -16,18 +17,20 @@ import (
 const NginxContainerName = "nginx1"
 
 func StartNginxContainer(ctx context.Context) (containerId string, err error) {
+	log.Println("11111111111111")
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		return
+		log.Fatal("Create client failed. ", err)
 	}
 	containerId, err = getNginxContainerId(ctx, cli)
 	if err != nil {
-		return
+		log.Fatal("Get container id failed. ", err)
 	}
+	log.Println("33333333")
 	if containerId == "" {
 		containerId, err = createNginxContainer(ctx, cli)
 		if err != nil {
-			return
+			log.Fatal("Create container failed. ", err)
 		}
 	}
 
@@ -35,9 +38,10 @@ func StartNginxContainer(ctx context.Context) (containerId string, err error) {
 	if !inspect.State.Running {
 		err = cli.ContainerStart(ctx, containerId, types.ContainerStartOptions{})
 		if err != nil {
-			return
+			log.Fatal("Start container failed. ", err)
 		}
 	}
+	log.Println("22222222222")
 	return
 }
 
@@ -56,7 +60,7 @@ func getNginxContainerId(ctx context.Context, cli *client.Client) (containerId s
 	return
 }
 
-func createNginxContainer(ctx context.Context, cli *client.Client) (containerId string, err error) {
+func createNginxContainer(c context.Context, cli *client.Client) (containerId string, err error) {
 	config := container.Config{
 		Image:        "nginx",
 		ExposedPorts: nat.PortSet{"80": struct{}{}},
@@ -73,6 +77,11 @@ func createNginxContainer(ctx context.Context, cli *client.Client) (containerId 
 				Target: "/tmp/socket",
 				Source: dir.GetSocketDir(),
 			},
+			{
+				Type:   "bind",
+				Target: "/tmp/log",
+				Source: dir.GetLogDir(),
+			},
 		},
 		PortBindings: nat.PortMap{
 			"80/tcp": []nat.PortBinding{
@@ -83,11 +92,25 @@ func createNginxContainer(ctx context.Context, cli *client.Client) (containerId 
 			},
 		},
 	}
-	body, err := cli.ContainerCreate(ctx, &config, &hostConfig, nil, nil, NginxContainerName)
+	body, err := cli.ContainerCreate(c, &config, &hostConfig, nil, nil, NginxContainerName)
 	if err != nil {
+		log.Println("Create container failed. ", err)
 		return
 	}
 	containerId = body.ID
+	exec, err := cli.ContainerExecCreate(c, containerId, types.ExecConfig{
+		Cmd: []string{"/bin/sh", "-c", "while sleep 3; do chmod 777 /tmp/socket/*.sock; done"},
+	})
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = cli.ContainerExecStart(c, exec.ID, types.ExecStartCheck{})
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("done")
 	return
 }
 

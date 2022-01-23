@@ -41,6 +41,16 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"reason": err.Error()})
 		return
 	}
+	p := database.GetQuery().Project
+	projects, err := p.WithContext(c).Where(p.UserId.Eq(user.ID)).Find()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
+	if len(projects) > 3 {
+		c.JSON(http.StatusTooManyRequests, gin.H{"reason": "目前每个账户只能创建 3 个项目"})
+		return
+	}
 	oauth2Token := oauth2.Token{AccessToken: auth.AccessToken, RefreshToken: "hi"}
 	client := sdk.NewClient(github.Conf.Client(c, &oauth2Token))
 	repo, _, err := client.Repositories.Create(c, "", &sdk.Repository{
@@ -67,7 +77,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		log.Println("Get tree failed.", err)
 		return
 	}
-	files := getNodejsAppFiles(struct{ Name string }{Name: params.RepoName})
+	files := getAppFiles(params.AppKind, struct{ Name string }{Name: params.RepoName})
 	fileTree := make([]*sdk.TreeEntry, 0, 128)
 	for _, file := range files {
 		fileTree = append(fileTree, &sdk.TreeEntry{
@@ -213,15 +223,15 @@ type Node struct {
 	Content string
 }
 
-func getNodejsAppFiles(data interface{}) (nodes []Node) {
-	currentDir, _ := os.Getwd()
+func getAppFiles(appKind string, data interface{}) (nodes []Node) {
+	cwd, _ := os.Getwd()
 	// FIXME: hard code
 	if gin.Mode() == gin.TestMode {
-		for !strings.HasSuffix(currentDir, "intery-demo-1" /*project dir name*/) {
-			currentDir = filepath.Dir(currentDir)
+		for !strings.HasSuffix(cwd, "intery-demo-1" /*project dir name*/) {
+			cwd = filepath.Dir(cwd)
 		}
 	}
-	d := dir.GetAppTemplatesDir("nodejs")
+	d := dir.GetAppTemplatesDir(appKind)
 	err := filepath.Walk(d, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			log.Println(err)
