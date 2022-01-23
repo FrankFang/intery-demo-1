@@ -101,6 +101,11 @@ func CreateNginxContainer(c context.Context) (containerId string, err error) {
 				Target: "/key",
 				Source: dir.GetKeyDir(),
 			},
+			{
+				Type:   "bind",
+				Target: "/www",
+				Source: dir.GetFrontendDir(),
+			},
 		},
 		PortBindings: nat.PortMap{
 			"80/tcp": []nat.PortBinding{

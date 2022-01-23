@@ -64,3 +64,12 @@ func GetKeyDir() (keyDir string) {
 	}
 	return
 }
+
+func GetFrontendDir() (frontendDir string) {
+	frontendDir = os.Getenv("FRONTEND_DIR")
+	if frontendDir == "" {
+		cwd, _ := os.Getwd()
+		frontendDir = filepath.Join(cwd, "www")
+	}
+	return
+}
