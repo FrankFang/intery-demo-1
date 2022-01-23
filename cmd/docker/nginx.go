@@ -76,8 +76,11 @@ func GetNginxContainerId(ctx context.Context) (containerId string, err error) {
 
 func CreateNginxContainer(c context.Context) (containerId string, err error) {
 	config := container.Config{
-		Image:        "nginx",
-		ExposedPorts: nat.PortSet{"80": struct{}{}},
+		Image: "nginx",
+		ExposedPorts: nat.PortSet{
+			"443/tcp": struct{}{},
+			"80/tcp":  struct{}{},
+		},
 	}
 	hostConfig := container.HostConfig{
 		Mounts: []mount.Mount{
@@ -107,10 +110,17 @@ func CreateNginxContainer(c context.Context) (containerId string, err error) {
 				Source: dir.GetFrontendDir(),
 			},
 		},
+		PublishAllPorts: true,
 		PortBindings: nat.PortMap{
+			"443/tcp": []nat.PortBinding{
+				{
+					HostIP:   "0.0.0.0",
+					HostPort: "443",
+				},
+			},
 			"80/tcp": []nat.PortBinding{
 				{
-					HostIP:   "",
+					HostIP:   "0.0.0.0",
 					HostPort: "80",
 				},
 			},

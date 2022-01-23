@@ -201,20 +201,16 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	s := string(content)
 	if !strings.Contains(s, fmt.Sprintf("location /preview/%d/", project.ID)) {
 		s = strings.Replace(s, comments, comments+"\n"+fmt.Sprintf(`
-	location /preview/%d/ {
-		proxy_pass http://upstream_%d;
-		proxy_set_header            Host $host;
-		proxy_set_header            X-Real-IP $remote_addr;
-		proxy_http_version          1.1;
-		proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
-		proxy_set_header            X-Forwarded-Proto http;
-		proxy_redirect              http:// $scheme://;
+  location /preview/%d/ {
+    proxy_pass http://unix:/tmp/socket/%d.sock:/;
+    proxy_set_header            Host $host;
+    proxy_set_header            X-Real-IP $remote_addr;
+    proxy_http_version          1.1;
+    proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header            X-Forwarded-Proto http;
+    proxy_redirect              http:// $scheme://;
 	}
 `, project.ID, project.ID), -1)
-		s = fmt.Sprintf(`upstream upstream_%d {
-	server unix:/tmp/socket/%d.sock;
-}
-`, project.ID, project.ID) + s
 	}
 	err = ioutil.WriteFile(confPath, []byte(s), 0777)
 	if err != nil {
