@@ -14,36 +14,41 @@ server {
 server {
   listen              443 ssl;
   server_name         i.xiedaimala.com;
-  ssl_certificate     /acme.sh/i.xiedaimala.com.cer;
-  ssl_certificate_key /acme.sh/i.xiedaimala.com.key;
+  ssl_certificate     /key/i.xiedaimala.com.cer;
+  ssl_certificate_key /key/i.xiedaimala.com.key;
   ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
   ssl_ciphers         HIGH:!aNULL:!MD5;
   access_log /tmp/log/access.log;
   error_log  /tmp/log/error.log info;
+
+  # Don't Modify the following line
+  # Placeholder
+
+  # Add your custom rules here
 
   root /www;
 
   location /api/ {
     proxy_pass http://unix:/tmp/socket/intery.sock:;
     proxy_set_header            Host $host;
-                proxy_set_header            X-Real-IP $remote_addr;
-                proxy_http_version          1.1;
-                proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header            X-Forwarded-Proto http;
-                proxy_redirect              http:// $scheme://;
+    proxy_set_header            X-Real-IP $remote_addr;
+    proxy_http_version          1.1;
+    proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header            X-Forwarded-Proto http;
+    proxy_redirect              http:// $scheme://;
   }
   location /api/v1/logs {
     proxy_pass http://unix:/tmp/socket/intery.sock:;
     proxy_set_header            Host $host;
-                proxy_set_header            X-Real-IP $remote_addr;
-                proxy_http_version          1.1;
+    proxy_set_header            X-Real-IP $remote_addr;
+    proxy_http_version          1.1;
     proxy_set_header            Connection "";
     chunked_transfer_encoding   off;
     proxy_buffering off;
     proxy_cache off;
-                proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header            X-Forwarded-Proto http;
-                proxy_redirect              http:// $scheme://;
+    proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header            X-Forwarded-Proto http;
+    proxy_redirect              http:// $scheme://;
   }
   location / {
     gzip on;
@@ -51,7 +56,4 @@ server {
     gzip_min_length 1000;
     try_files $uri $uri/ /index.html;
   }
-
-  # Don't Modify the following line
-  # Placeholder
 }
