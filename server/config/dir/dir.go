@@ -51,7 +51,7 @@ func GetLogDir() (logDir string) {
 	logDir = os.Getenv("LOG_DIR")
 	if logDir == "" {
 		cwd, _ := os.Getwd()
-		logDir = filepath.Join(cwd, "logs")
+		logDir = filepath.Join(cwd, "log")
 	}
 	return
 }

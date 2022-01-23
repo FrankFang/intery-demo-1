@@ -16,19 +16,23 @@ import (
 
 const NginxContainerName = "nginx1"
 
-func StartNginxContainer(ctx context.Context) (containerId string, err error) {
-	log.Println("11111111111111")
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+var cli *client.Client = nil
+
+func init() {
+	c, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		log.Fatal("Create client failed. ", err)
 	}
-	containerId, err = getNginxContainerId(ctx, cli)
+	cli = c
+}
+
+func StartNginxContainer(ctx context.Context) (containerId string, err error) {
+	containerId, err = GetNginxContainerId(ctx)
 	if err != nil {
 		log.Fatal("Get container id failed. ", err)
 	}
-	log.Println("33333333")
 	if containerId == "" {
-		containerId, err = createNginxContainer(ctx, cli)
+		containerId, err = CreateNginxContainer(ctx)
 		if err != nil {
 			log.Fatal("Create container failed. ", err)
 		}
@@ -41,11 +45,10 @@ func StartNginxContainer(ctx context.Context) (containerId string, err error) {
 			log.Fatal("Start container failed. ", err)
 		}
 	}
-	log.Println("22222222222")
 	return
 }
 
-func getNginxContainerId(ctx context.Context, cli *client.Client) (containerId string, err error) {
+func GetNginxContainerId(ctx context.Context) (containerId string, err error) {
 	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{
 		Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: NginxContainerName}),
 		All:     true,
@@ -60,7 +63,7 @@ func getNginxContainerId(ctx context.Context, cli *client.Client) (containerId s
 	return
 }
 
-func createNginxContainer(c context.Context, cli *client.Client) (containerId string, err error) {
+func CreateNginxContainer(c context.Context) (containerId string, err error) {
 	config := container.Config{
 		Image:        "nginx",
 		ExposedPorts: nat.PortSet{"80": struct{}{}},
@@ -119,7 +122,7 @@ func ReloadNginx(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	containerId, err := getNginxContainerId(ctx, cli)
+	containerId, err := GetNginxContainerId(ctx)
 	if err != nil {
 		return
 	}
@@ -159,6 +162,17 @@ func ReloadNginx(ctx context.Context) (err error) {
 		return
 	}
 	err = cli.ContainerExecStart(ctx, exec.ID, types.ExecStartCheck{})
+	if err != nil {
+		return
+	}
+	return
+}
+
+func RemoveContainer(ctx context.Context, containerId string) (err error) {
+	err = cli.ContainerRemove(ctx, containerId, types.ContainerRemoveOptions{
+		RemoveVolumes: false,
+		Force:         true,
+	})
 	if err != nil {
 		return
 	}

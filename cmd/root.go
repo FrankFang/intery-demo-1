@@ -72,6 +72,27 @@ var rootCmd = &cli.App{
 					},
 				},
 				{
+					Name: "nginx:remove",
+					Action: func(c *cli.Context) error {
+						ctx := context.Background()
+						containerId, err := docker.GetNginxContainerId(ctx)
+						if err != nil {
+							log.Fatal("Get nginx container id failed. ", err)
+							return err
+						}
+						if containerId == "" {
+							log.Fatal("Nginx container named nginx1 is not found.")
+							return nil
+						}
+						err = docker.RemoveContainer(ctx, containerId)
+						if err != nil {
+							log.Fatal("Remove nginx container failed. ", err)
+							return err
+						}
+						return nil
+					},
+				},
+				{
 					Name: "clear",
 					Action: func(c *cli.Context) error {
 						// remove all files in /tmp/socket
