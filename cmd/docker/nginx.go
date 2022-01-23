@@ -26,24 +26,35 @@ func init() {
 	cli = c
 }
 
-func StartNginxContainer(ctx context.Context) (containerId string, err error) {
-	containerId, err = GetNginxContainerId(ctx)
+func StartNginxContainer(c context.Context) (containerId string, err error) {
+	containerId, err = GetNginxContainerId(c)
 	if err != nil {
 		log.Fatal("Get container id failed. ", err)
 	}
 	if containerId == "" {
-		containerId, err = CreateNginxContainer(ctx)
+		containerId, err = CreateNginxContainer(c)
 		if err != nil {
 			log.Fatal("Create container failed. ", err)
 		}
 	}
 
-	inspect, err := cli.ContainerInspect(ctx, containerId)
-	if !inspect.State.Running {
-		err = cli.ContainerStart(ctx, containerId, types.ContainerStartOptions{})
-		if err != nil {
-			log.Fatal("Start container failed. ", err)
-		}
+	inspect, _ := cli.ContainerInspect(c, containerId)
+	if inspect.State.Running {
+		return
+	}
+	err = cli.ContainerStart(c, containerId, types.ContainerStartOptions{})
+	if err != nil {
+		log.Fatal("Start container failed. ", err)
+	}
+	exec, err := cli.ContainerExecCreate(c, containerId, types.ExecConfig{
+		Cmd: []string{"/bin/sh", "-c", "while sleep 3; do chmod 777 /tmp/socket/*.sock; done"},
+	})
+	if err != nil {
+		log.Fatal("Create exec failed. ", err)
+	}
+	err = cli.ContainerExecStart(c, exec.ID, types.ExecStartCheck{})
+	if err != nil {
+		log.Fatal("Start exec failed. ", err)
 	}
 	return
 }
@@ -85,6 +96,11 @@ func CreateNginxContainer(c context.Context) (containerId string, err error) {
 				Target: "/tmp/log",
 				Source: dir.GetLogDir(),
 			},
+			{
+				Type:   "bind",
+				Target: "/key",
+				Source: dir.GetKeyDir(),
+			},
 		},
 		PortBindings: nat.PortMap{
 			"80/tcp": []nat.PortBinding{
@@ -101,19 +117,6 @@ func CreateNginxContainer(c context.Context) (containerId string, err error) {
 		return
 	}
 	containerId = body.ID
-	exec, err := cli.ContainerExecCreate(c, containerId, types.ExecConfig{
-		Cmd: []string{"/bin/sh", "-c", "while sleep 3; do chmod 777 /tmp/socket/*.sock; done"},
-	})
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	err = cli.ContainerExecStart(c, exec.ID, types.ExecStartCheck{})
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	log.Println("done")
 	return
 }
 

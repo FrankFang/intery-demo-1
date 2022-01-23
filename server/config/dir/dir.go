@@ -55,3 +55,12 @@ func GetLogDir() (logDir string) {
 	}
 	return
 }
+
+func GetKeyDir() (keyDir string) {
+	keyDir = os.Getenv("KEY_DIR")
+	if keyDir == "" {
+		cwd, _ := os.Getwd()
+		keyDir = filepath.Join(cwd, "key")
+	}
+	return
+}
