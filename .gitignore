@@ -2,5 +2,5 @@
 /.idea
 /.vscode
 /userspace
-/config/nginx_default.conf
+/config/nginx/default.conf
 *.log
