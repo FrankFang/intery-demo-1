@@ -51,68 +51,11 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		c.JSON(http.StatusTooManyRequests, gin.H{"reason": "目前每个账户只能创建 3 个项目"})
 		return
 	}
-	oauth2Token := oauth2.Token{AccessToken: auth.AccessToken, RefreshToken: "hi"}
+	oauth2Token := oauth2.Token{AccessToken: auth.AccessToken, RefreshToken: "none"}
 	client := sdk.NewClient(github.Conf.Client(c, &oauth2Token))
-	repo, _, err := client.Repositories.Create(c, "", &sdk.Repository{
-		Name:    sdk.String(params.RepoName),
-		Private: sdk.Bool(true),
+	repo, _, err := client.Repositories.CreateFromTemplate(c, "jirengu-inc", "intery-template-"+params.AppKind, &sdk.TemplateRepoRequest{
+		Name: sdk.String(params.RepoName),
 	})
-	if err != nil {
-		ctrl.HandleGitHubError(c, err)
-		log.Println("Create repo failed.", err)
-		return
-	}
-	repoContent, _, err := client.Repositories.CreateFile(c, auth.Login, params.RepoName, "README.md", &sdk.RepositoryContentFileOptions{
-		Content: []byte("# " + params.RepoName),
-		Message: sdk.String("Initial commit"),
-	})
-	if err != nil {
-		ctrl.HandleGitHubError(c, err)
-		log.Println("Create file failed.", err)
-		return
-	}
-	tree, _, err := client.Git.GetTree(c, auth.Login, params.RepoName, *repoContent.SHA, true)
-	if err != nil {
-		ctrl.HandleGitHubError(c, err)
-		log.Println("Get tree failed.", err)
-		return
-	}
-	files := getAppFiles(params.AppKind, struct{ Name string }{Name: params.RepoName})
-	fileTree := make([]*sdk.TreeEntry, 0, 128)
-	for _, file := range files {
-		fileTree = append(fileTree, &sdk.TreeEntry{
-			Path:    sdk.String(file.Path),
-			Mode:    sdk.String("100644"),
-			Type:    sdk.String("blob"),
-			Content: sdk.String(file.Content),
-		})
-	}
-	newTree, _, err := client.Git.CreateTree(c, auth.Login, params.RepoName, *tree.SHA, fileTree)
-	if err != nil {
-		ctrl.HandleGitHubError(c, err)
-		log.Println("Create tree failed.", err)
-		return
-	}
-	newCommit, _, err := client.Git.CreateCommit(c, auth.Login, params.RepoName, &sdk.Commit{
-		Message: sdk.String("Second commit"),
-		Tree:    newTree,
-		Parents: []*sdk.Commit{
-			{
-				SHA: tree.SHA,
-			},
-		},
-	})
-	if err != nil {
-		ctrl.HandleGitHubError(c, err)
-		log.Println("Create commit failed.", err)
-		return
-	}
-	_, _, err = client.Git.UpdateRef(c, auth.Login, params.RepoName, &sdk.Reference{
-		Ref: sdk.String("refs/heads/main"),
-		Object: &sdk.GitObject{
-			SHA: newCommit.SHA,
-		},
-	}, false)
 	if err != nil {
 		ctrl.HandleGitHubError(c, err)
 		log.Println("Update ref failed.", err)

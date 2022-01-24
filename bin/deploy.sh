@@ -1,7 +1,7 @@
 user=intery
 host=$user@i.xiedaimala.com
 CGO_ENABLED=0 go build .
-rsync -avP server/app_templates/ $host:/home/intery/app_templates/
+# rsync -avP server/app_templates/ $host:/home/intery/app_templates/
 ssh $host 'kill -9 $(cat /home/intery/pid/intery.pid)'
 ssh $host 'rm /home/intery/socket/intery.sock'
 scp intery $host:/home/intery/backend/current

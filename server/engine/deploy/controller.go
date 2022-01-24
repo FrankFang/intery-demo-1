@@ -180,7 +180,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 
 	containerId, err := CreateAndStartContainer(c, Options{
 		AppKind:        project.AppKind,
-		ContainerName:  fmt.Sprintf("app_%d_%d", user.ID, project.ID),
+		ContainerName:  fmt.Sprintf("app_user%d_project%d", user.ID, project.ID),
 		ProjectDir:     projectDir,
 		SocketDir:      socketDir,
 		SocketFileName: socketFileName,
