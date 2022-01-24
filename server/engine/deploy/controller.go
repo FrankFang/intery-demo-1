@@ -90,9 +90,20 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"reason": "该项目不属于该用户"})
 		return
 	}
+	if project.LatestDeploymentId != 0 {
+		err = RemoveCurrentContainer(c, project.LatestDeploymentId)
+		if err != nil {
+			log.Println("Remove current container failed. ", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"reason":        err.Error(),
+				"deployment_id": project.LatestDeploymentId,
+			})
+			return
+		}
+		time.Sleep(time.Second * 3)
+	}
 	client := ctrl.GetGithubClient(c, auth)
 
-	// download github repo as a archive file
 	url, _, err := client.Repositories.GetArchiveLink(c, auth.Login, project.RepoName, "zipball", nil, false)
 	if err != nil {
 		ctrl.HandleGitHubError(c, err)
@@ -114,6 +125,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	}
 	archivePath := filepath.Join(projectDir, fmt.Sprintf("src-%d.zip", time.Now().Unix()))
 	srcDir := filepath.Join(projectDir, "src")
+	dir.ResetDir(srcDir)
 	socketDir := dir.GetSocketDir()
 	confPath := filepath.Join(dir.GetNginxConfigDir(), "default.conf")
 	if err := os.MkdirAll(socketDir, os.ModePerm); err != nil {
@@ -139,6 +151,11 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 		return
 	}
+	if err := os.Remove(archivePath); err != nil {
+		log.Println("Remove archive failed. ", archivePath, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
 	var dirName string
 	if files, err := ioutil.ReadDir(srcDir); err != nil {
 		log.Println("Read srcDir failed. ", srcDir, err)
@@ -160,17 +177,6 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	}
 	d := database.GetQuery().Deployment
 
-	if project.LatestDeploymentId != 0 {
-		err = RemoveCurrentContainer(c, project.LatestDeploymentId)
-		if err != nil {
-			log.Println("Remove current container failed. ", err)
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"reason":        err.Error(),
-				"deployment_id": project.LatestDeploymentId,
-			})
-			return
-		}
-	}
 	_, err = d.WithContext(c).Where(d.ID.Eq(project.LatestDeploymentId)).UpdateColumn(d.Status, "removed")
 	if err != nil {
 		log.Println("Update deployment's status failed. ", err)

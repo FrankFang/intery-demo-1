@@ -19,6 +19,11 @@ func EnsureProjectDir(userDir string, projectId uint) (projectDir string) {
 	return
 }
 
+func ResetDir(anyDir string) {
+	os.RemoveAll(anyDir)
+	os.MkdirAll(anyDir, os.ModePerm)
+}
+
 func GetNginxConfigDir() (nginxConfigPath string) {
 	nginxConfigPath = os.Getenv("NGINX_CONFIG_DIR")
 	if nginxConfigPath == "" {

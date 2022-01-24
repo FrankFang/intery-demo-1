@@ -7,3 +7,4 @@ ssh $host 'rm /home/intery/socket/intery.sock'
 scp intery $host:/home/intery/backend/current
 ssh $host '/home/intery/backend/current/intery server >> /home/intery/log/intery.log 2>&1 & echo $! > /home/intery/pid/intery.pid' 
 ssh $host "docker exec nginx1 chmod 777 /tmp/socket/intery.sock"
+echo 'OK'

@@ -53,12 +53,21 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	}
 	oauth2Token := oauth2.Token{AccessToken: auth.AccessToken, RefreshToken: "none"}
 	client := sdk.NewClient(github.Conf.Client(c, &oauth2Token))
+
 	repo, _, err := client.Repositories.CreateFromTemplate(c, "jirengu-inc", "intery-template-"+params.AppKind, &sdk.TemplateRepoRequest{
 		Name: sdk.String(params.RepoName),
 	})
+
 	if err != nil {
-		ctrl.HandleGitHubError(c, err)
-		log.Println("Update ref failed.", err)
+		if i := strings.Index(err.Error(), "Name already exists"); i >= 0 {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{
+				"errors": gin.H{
+					"repo_name": []string{"GitHub上已经存在该仓库，请使用其他仓库名。"},
+				},
+			})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		}
 		return
 	}
 
