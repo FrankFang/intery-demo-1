@@ -3,10 +3,10 @@ package github
 import (
 	"encoding/json"
 	"fmt"
+	"intery/server/config"
 	"intery/server/database"
 	"intery/server/model"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 
@@ -25,28 +25,29 @@ type GitHubUser struct {
 var conf = Conf
 
 func (ctrl Controller) Show(c *gin.Context) {
-	url := conf.AuthCodeURL(uniuri.New())
+	state := uniuri.New()
+	config.AddOAuth2State(state)
+	url := conf.AuthCodeURL(state)
 	c.JSON(200, gin.H{
 		"url": url,
 	})
 }
 
 func (ctrl Controller) Callback(c *gin.Context) {
-	var p struct {
-		Code string `json:"code"`
+	var params struct {
+		Code  string `json:"code"`
+		State string `json:"state"`
 	}
-	body, err := ioutil.ReadAll(c.Request.Body)
-	if err != nil {
-		log.Println(err)
-	}
-	err = json.Unmarshal(body, &p)
-	if err != nil {
-		c.JSON(400, gin.H{
-			"reason": "no code",
-		})
+	if err := c.BindJSON(&params); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"reason": err.Error()})
 		return
 	}
-	token, err := conf.Exchange(c, p.Code)
+	if !config.UseOAuth2State(params.State) {
+		c.JSON(http.StatusBadRequest, gin.H{"reason": "state 错误"})
+		return
+	}
+
+	token, err := conf.Exchange(c, params.Code)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"reason": "exchange token via code failed",
@@ -55,7 +56,7 @@ func (ctrl Controller) Callback(c *gin.Context) {
 	}
 	client := conf.Client(c, token)
 	defer client.CloseIdleConnections()
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		response, err := client.Get("https://api.github.com/user")
 		if err != nil {
 			continue
@@ -69,25 +70,37 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		if err != nil {
 			continue
 		}
-		auth := model.Authorization{
-			Provider: "github",
-			Login:    githubUser.Login,
+		u := database.GetQuery().User
+		var user *model.User
+		a := database.GetQuery().Authorization
+		auth, err := a.WithContext(c).Where(a.Login.Eq(githubUser.Login)).Where(a.Provider.Eq("github")).FirstOrInit()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"reason": "Authorization not found. " + err.Error(),
+			})
+			return
 		}
-		var user model.User
-		database.GetDB().FirstOrInit(&auth)
 		if auth.UserId == 0 {
 			name := githubUser.Name
 			if name == "" {
 				name = githubUser.Login
 			}
-			user = model.User{Name: name}
-			err := database.GetQuery().WithContext(c).User.Create(&user)
-			if err != nil {
-				panic(err)
+			user = &model.User{Name: name}
+			if err := u.WithContext(c).Create(user); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"reason": "create user failed. " + err.Error(),
+				})
+				return
 			}
 			auth.UserId = user.ID
 		} else {
-			database.GetDB().First(&user, auth.UserId)
+			user, err = u.WithContext(c).Where(u.ID.Eq(auth.UserId)).First()
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"reason": "find user failed. " + err.Error(),
+				})
+				return
+			}
 		}
 		auth.AccessToken = token.AccessToken
 		auth.TokenType = token.TokenType
@@ -97,7 +110,7 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		auth.AvatarUrl = githubUser.AvatarUrl
 		auth.Name = githubUser.Name
 		auth.VendorId = fmt.Sprintf("%v", githubUser.Id)
-		if err = database.GetQuery().WithContext(c).Authorization.Save(&auth); err != nil {
+		if err = database.GetQuery().WithContext(c).Authorization.Save(auth); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 		}
 		if t, err := user.JWT(); err != nil {

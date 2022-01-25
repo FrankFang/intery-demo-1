@@ -78,14 +78,17 @@ func CreateAndStartContainer(c *gin.Context, opt Options) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	imageName := ""
-	command := ""
+	var imageName string
+	var command string
+	var memory int64
 	if opt.AppKind == "nodejs" {
 		imageName = "node:16.13"
 		command = "npm i --registry=https://registry.npmmirror.com && node server.js"
+		memory = 128 * 1024 * 1024
 	} else if opt.AppKind == "golang" {
 		imageName = "golang:1.17.6"
 		command = "go env -w GOPROXY=https://goproxy.cn,direct && go run main.go"
+		memory = 512 * 1024 * 1024
 	}
 
 	config := container.Config{
@@ -113,6 +116,9 @@ func CreateAndStartContainer(c *gin.Context, opt Options) (string, error) {
 				Source:   opt.SocketDir,
 				ReadOnly: false,
 			},
+		},
+		Resources: container.Resources{
+			Memory: memory,
 		},
 	}
 	container, err := cli.ContainerCreate(c, &config, &hostConfig, nil, nil, opt.ContainerName)
