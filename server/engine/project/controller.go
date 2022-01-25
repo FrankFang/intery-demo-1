@@ -47,7 +47,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 		return
 	}
-	if len(projects) > 3 {
+	if len(projects) >= 3 {
 		c.JSON(http.StatusTooManyRequests, gin.H{"reason": "目前每个账户只能创建 3 个项目"})
 		return
 	}

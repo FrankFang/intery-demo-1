@@ -1,6 +1,7 @@
 package base
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -24,9 +25,6 @@ import (
 )
 
 type BaseController struct {
-	// userId uint
-	user *model.User
-	auth *model.Authorization
 }
 
 func (ctrl *BaseController) MustHasPage(c *gin.Context) (page, perPage, offset int, err error) {
@@ -110,11 +108,9 @@ func (ctrl *BaseController) MustAuth(c *gin.Context) (auth *model.Authorization,
 }
 
 func (ctrl *BaseController) GetAuthFromUserId(userId uint) (auth *model.Authorization, err error) {
-	if ctrl.auth != nil {
-		return ctrl.auth, nil
-	}
-	err = database.GetDB().Find(&ctrl.auth, "user_id = ?", userId).Error
-	return ctrl.auth, err
+	a := database.GetQuery().Authorization
+	auth, err = a.WithContext(context.Background()).Where(a.UserId.Eq(userId)).First()
+	return
 }
 
 func (ctrl *BaseController) GetUserIdAndAuth(c *gin.Context) (userId uint, auth *model.Authorization, err error) {
@@ -136,15 +132,11 @@ func (ctrl *BaseController) GetUserAndAuth(c *gin.Context) (user *model.User, au
 		err = fmt.Errorf("无法从 Header 中获取 user id")
 		return
 	}
-	if ctrl.user != nil {
-		user = ctrl.user
-	} else {
-		u := database.GetQuery().User
-		user, err = u.WithContext(c).Where(u.ID.Eq(userId)).First()
-		if err != nil {
-			err = fmt.Errorf("不存在 id 为 %v 的用户", userId)
-			return
-		}
+	u := database.GetQuery().User
+	user, err = u.WithContext(c).Where(u.ID.Eq(userId)).First()
+	if err != nil {
+		err = fmt.Errorf("不存在 id 为 %v 的用户", userId)
+		return
 	}
 	return
 }

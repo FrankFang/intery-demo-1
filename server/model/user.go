@@ -14,7 +14,7 @@ var signKey *rsa.PrivateKey
 
 type User struct {
 	BaseModel
-	Name string `gorm:"type:varchar(100);not null"`
+	Name string `gorm:"type:varchar(100);not null" json:"name"`
 }
 
 func (u User) JWT() (token string, err error) {
