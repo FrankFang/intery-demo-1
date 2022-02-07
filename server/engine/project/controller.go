@@ -2,6 +2,8 @@ package project
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"html/template"
 	"intery/server/config/dir"
 	"intery/server/database"
@@ -19,7 +21,7 @@ import (
 	"intery/server/engine/base"
 
 	"github.com/gin-gonic/gin"
-	sdk "github.com/google/go-github/v41/github"
+	githubSdk "github.com/google/go-github/v41/github"
 	"golang.org/x/oauth2"
 )
 
@@ -36,6 +38,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"reason": err.Error()})
 		return
 	}
+	params.RepoName = params.AppKind + "-" + params.RepoName
 	user, auth, err := ctrl.GetUserAndAuth(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"reason": err.Error()})
@@ -52,30 +55,75 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		return
 	}
 	oauth2Token := oauth2.Token{AccessToken: auth.AccessToken, RefreshToken: "none"}
-	client := sdk.NewClient(github.Conf.Client(c, &oauth2Token))
+	var repoHome string
+	if auth.Provider == "github" {
+		githubClient := githubSdk.NewClient(github.Conf.Client(c, &oauth2Token))
 
-	repo, _, err := client.Repositories.CreateFromTemplate(c, "jirengu-inc", "intery-template-"+params.AppKind, &sdk.TemplateRepoRequest{
-		Name: sdk.String(params.RepoName),
-	})
+		repo, _, err := githubClient.Repositories.CreateFromTemplate(c, "jirengu-inc", "intery-template-"+params.AppKind, &githubSdk.TemplateRepoRequest{
+			Name: githubSdk.String(params.RepoName),
+		})
 
-	if err != nil {
-		if i := strings.Index(err.Error(), "Name already exists"); i >= 0 {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{
-				"errors": gin.H{
-					"repo_name": []string{"GitHub上已经存在该仓库，请使用其他仓库名。"},
-				},
-			})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		if err != nil {
+			if i := strings.Index(err.Error(), "Name already exists"); i >= 0 {
+				c.JSON(http.StatusUnprocessableEntity, gin.H{
+					"errors": gin.H{
+						"repo_name": []string{"GitHub上已经存在该仓库，请使用其他仓库名。"},
+					},
+				})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+			}
+			return
 		}
-		return
+		repoHome = repo.GetHTMLURL()
+	} else {
+		h := gin.H{"access_token": auth.AccessToken}
+		jsonData, _ := json.Marshal(h)
+		_, err := http.Post(
+			fmt.Sprintf("https://gitee.com/api/v5/repos/jirengu-inc/intery-template-%s/forks", params.AppKind),
+			"application/json;charset=UTF-8",
+			bytes.NewBuffer(jsonData),
+		)
+		if err != nil {
+			log.Println("Create gitee repo failed. ", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err})
+			return
+		}
+		h = gin.H{
+			"name": params.RepoName, "owner": auth.Login,
+			"repo": params.RepoName, "access_token": auth.AccessToken,
+			"path": params.RepoName,
+		}
+		jsonData, _ = json.Marshal(h)
+		req, _ := http.NewRequest("PATCH",
+			fmt.Sprintf("https://gitee.com/api/v5/repos/%s/%s", auth.Login, "intery-template-"+params.AppKind),
+			bytes.NewBuffer(jsonData),
+		)
+		req.Header.Set("Content-Type", "application/json;charset=UTF-8")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Println("Do request failed. ", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err})
+			return
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Println("Read response body failed. ", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err})
+			return
+		}
+		var tmp struct {
+			HtmlUrl string `json:"html_url"`
+		}
+		json.Unmarshal(body, &tmp)
+		repoHome = tmp.HtmlUrl
 	}
 
 	project := model.Project{
 		AppKind:  params.AppKind,
 		RepoName: params.RepoName,
 		UserId:   user.ID,
-		RepoHome: repo.GetHTMLURL(),
+		RepoHome: repoHome,
 	}
 	err = database.GetQuery().Project.WithContext(c).Create(&project)
 	if err != nil {

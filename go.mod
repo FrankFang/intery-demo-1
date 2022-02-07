@@ -27,6 +27,7 @@ require (
 )
 
 require (
+	gitee.com/openeuler/go-gitee v0.0.0-20211203025010-125370920041 // indirect
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/ahmetalpbalkan/dlog v0.0.0-20170105205344-4fb5f8204f26 // indirect
 	github.com/containerd/containerd v1.5.8 // indirect
@@ -69,6 +70,7 @@ require (
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/ugorji/go/codec v1.2.6 // indirect
+	github.com/weilaihui/go-gitee v0.0.0-20180119012206-fa3b93e18a32 // indirect
 	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect

@@ -9,10 +9,12 @@ import (
 	"intery/server/engine/base"
 	"intery/server/model"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -102,14 +104,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		}
 		time.Sleep(time.Second * 3)
 	}
-	client := ctrl.GetGithubClient(c, auth)
 
-	url, _, err := client.Repositories.GetArchiveLink(c, auth.Login, project.RepoName, "zipball", nil, false)
-	if err != nil {
-		ctrl.HandleGitHubError(c, err)
-		log.Println("Get archive link failed. ", err)
-		return
-	}
 	userDir := dir.EnsureUserDir(user.ID)
 	if err != nil {
 		log.Println("Make userDir failed. ", err)
@@ -118,14 +113,69 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	}
 
 	projectDir := dir.EnsureProjectDir(userDir, project.ID)
-	if err := os.MkdirAll(projectDir, os.ModePerm); err != nil {
-		log.Println("Make projectDir failed. ", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
-		return
-	}
-	archivePath := filepath.Join(projectDir, fmt.Sprintf("src-%d.zip", time.Now().Unix()))
 	srcDir := filepath.Join(projectDir, "src")
 	dir.ResetDir(srcDir)
+	var dirName string
+	if auth.Provider == "github" {
+
+		githubClient := ctrl.GetGithubClient(c, auth)
+		url, _, err := githubClient.Repositories.GetArchiveLink(c, auth.Login, project.RepoName, "zipball", nil, false)
+		if err != nil {
+			ctrl.HandleGitHubError(c, err)
+			log.Println("Get archive link failed. ", err)
+			return
+		}
+		if err := os.MkdirAll(projectDir, os.ModePerm); err != nil {
+			log.Println("Make projectDir failed. ", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+			return
+		}
+		archivePath := filepath.Join(projectDir, fmt.Sprintf("src-%d.zip", time.Now().Unix()))
+		if err := downloadFile(url.String(), archivePath); err != nil {
+			log.Println("Download url failed. ", url.String(), err)
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+			return
+		}
+
+		uz := unzip.New()
+		_, err = uz.Extract(archivePath, srcDir)
+		if err != nil {
+			log.Println("Extract archive failed. ", archivePath, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+			return
+		}
+		if err := os.Remove(archivePath); err != nil {
+			log.Println("Remove archive failed. ", archivePath, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+			return
+		}
+		if files, err := ioutil.ReadDir(srcDir); err != nil {
+			log.Println("Read srcDir failed. ", srcDir, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+			return
+		} else {
+			for _, node := range files {
+				if node.IsDir() {
+					dirName = node.Name()
+					break
+				}
+			}
+		}
+	} else {
+		dirName = strconv.Itoa(int(time.Now().Unix()))
+		dirPath := filepath.Join(srcDir, dirName)
+		if err := os.MkdirAll(dirPath, fs.ModePerm); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+			return
+		}
+		cmd := exec.Command("git", "clone", fmt.Sprintf("https://gitee.com/%s/%s.git", auth.Login, project.RepoName), dirPath)
+		err := cmd.Run()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+			return
+		}
+	}
+
 	socketDir := dir.GetSocketDir()
 	confPath := filepath.Join(dir.GetNginxConfigDir(), "default.conf")
 	if err := os.MkdirAll(socketDir, os.ModePerm); err != nil {
@@ -137,37 +187,6 @@ func (ctrl *Controller) Create(c *gin.Context) {
 		log.Println("Chmod socketDir failed. ", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
 		return
-	}
-	if err := downloadFile(url.String(), archivePath); err != nil {
-		log.Println("Download url failed. ", url.String(), err)
-		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
-		return
-	}
-
-	uz := unzip.New()
-	_, err = uz.Extract(archivePath, srcDir)
-	if err != nil {
-		log.Println("Extract archive failed. ", archivePath, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
-		return
-	}
-	if err := os.Remove(archivePath); err != nil {
-		log.Println("Remove archive failed. ", archivePath, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
-		return
-	}
-	var dirName string
-	if files, err := ioutil.ReadDir(srcDir); err != nil {
-		log.Println("Read srcDir failed. ", srcDir, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
-		return
-	} else {
-		for _, node := range files {
-			if node.IsDir() {
-				dirName = node.Name()
-				break
-			}
-		}
 	}
 	socketFileName := fmt.Sprintf("%s.sock", strconv.Itoa(int(project.ID)))
 	if err := os.RemoveAll(filepath.Join(socketDir, socketFileName)); err != nil {
@@ -194,7 +213,7 @@ func (ctrl *Controller) Create(c *gin.Context) {
 	})
 	if err != nil {
 		log.Println("Create container failed. ", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"reason": "创建容器失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": "创建容器失败" + err.Error()})
 		return
 	}
 	comments := "# Placeholder"

@@ -2,12 +2,20 @@ package config
 
 import (
 	"os"
+	"sync"
 )
 
-var oAuth2States = map[string]struct{}{}
+type container struct {
+	m            sync.Mutex
+	oAuth2States map[string]struct{}
+}
+
+var c container
 
 func init() {
-
+	c = container{
+		oAuth2States: map[string]struct{}{},
+	}
 }
 
 func GetDomain() (domain string) {
@@ -26,14 +34,20 @@ func GetString(name string) string {
 }
 
 func GetOAuth2States() map[string]struct{} {
-	return oAuth2States
+	c.m.Lock()
+	defer c.m.Unlock()
+	return c.oAuth2States
 }
 func AddOAuth2State(state string) {
-	oAuth2States[state] = struct{}{}
+	c.m.Lock()
+	defer c.m.Unlock()
+	c.oAuth2States[state] = struct{}{}
 }
 func UseOAuth2State(state string) bool {
-	if _, ok := oAuth2States[state]; ok {
-		delete(oAuth2States, state)
+	c.m.Lock()
+	defer c.m.Unlock()
+	if _, ok := c.oAuth2States[state]; ok {
+		delete(c.oAuth2States, state)
 		return true
 	} else {
 		return false

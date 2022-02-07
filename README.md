@@ -1,3 +1,27 @@
+# 更新 HTTPS 证书
+
+目前用到了两个 HTTPS 证书，一个是 *.sites.interycode.com 泛域名证书，更新命令为：
+
+```
+acme.sh --issue --renew --dns -d *.sites.interycode.com --yes-I-know-dns-manual-mode-enough-go-ahead-please
+cp /home/intery/.acme.sh/\*.sites.interycode.com/\*.sites.interycode.com.* /home/intery/key/
+```
+
+这个命令需要修改 DNS 的 TXT 记录，所以无法自动运行。
+
+另一个是 interycode.com 的证书，更新命令为：
+
+```
+acme.sh --issue -d interycode.com -w /home/intery/frontend/current/
+cp /home/intery/.acme.sh/interycode.com/interycode.com.* /home/intery/key/
+```
+
+上面命令可以在无人看管的情况下运行。
+
+默认情况下，acme.sh 已经在 crontab -e 里添加了自动更新脚本，但需要修改 DNS 的时候就必须手动更新了。
+
+所以我可能会选择为 *.sites.interycode.com 的每一个域名单独申请 HTTPS 证书，这样更自动化一点。
+
 # 创建数据库
 
 ```

@@ -42,15 +42,15 @@ func (ctrl Controller) Callback(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"reason": err.Error()})
 		return
 	}
-	if !config.UseOAuth2State(params.State) {
-		c.JSON(http.StatusBadRequest, gin.H{"reason": "state 错误"})
-		return
-	}
+	// if !config.UseOAuth2State(params.State) {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"reason": "state 错误"})
+	// 	return
+	// }
 
 	token, err := conf.Exchange(c, params.Code)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"reason": "exchange token via code failed",
+			"reason": "exchange token via code failed. " + err.Error(),
 		})
 		return
 	}
